@@ -1,4 +1,6 @@
+import { Factory, Layers } from 'lucide-react';
 import { FormEvent, useState } from 'react';
+import { PageHeader } from '../components/PageHeader';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { useApi } from '../hooks';
@@ -132,8 +134,15 @@ export function PlantsPage() {
 
   return (
     <div className="page">
-      <h1>Plants &amp; settings</h1>
+      <PageHeader
+        icon={Factory}
+        title="Plants & settings"
+        description="Operating rules and cost policies per plant, and whether this installation serves one plant or many."
+      />
       <section className="card">
+        <h2>
+          <Layers size={18} aria-hidden /> Installation
+        </h2>
         <label className="checkbox">
           <input type="checkbox" checked={multi} onChange={toggleMulti} disabled={!settings.data} />
           Multi-plant mode
@@ -161,10 +170,19 @@ export function PlantsPage() {
                 <tr key={p.id} className={p.id === session?.plantId ? 'selected' : ''}>
                   <td>{p.code}</td>
                   <td>
-                    {p.name} {p.id === session?.plantId && <span className="badge">current</span>}
+                    <span className="cell-main">{p.name}</span>{' '}
+                    {p.id === session?.plantId && <span className="badge accent">Current</span>}
                   </td>
-                  <td>{p.exclusiveRideRequiresApproval ? 'Yes' : 'No'}</td>
-                  <td>{p.visitorModuleEnabled ? 'Enabled' : 'Off'}</td>
+                  <td>
+                    <span className={`badge ${p.exclusiveRideRequiresApproval ? 'ok' : ''}`}>
+                      {p.exclusiveRideRequiresApproval ? 'Required' : 'Not required'}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`badge ${p.visitorModuleEnabled ? 'ok' : ''}`}>
+                      {p.visitorModuleEnabled ? 'Enabled' : 'Off'}
+                    </span>
+                  </td>
                   <td className="nowrap">
                     <button className="link" onClick={() => setForm(p)}>
                       Edit

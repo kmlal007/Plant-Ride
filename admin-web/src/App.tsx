@@ -1,5 +1,27 @@
+import {
+  BadgeIndianRupee,
+  Building2,
+  Bus,
+  CarFront,
+  FolderKanban,
+  Handshake,
+  LayoutDashboard,
+  ListChecks,
+  LogOut,
+  LucideIcon,
+  MapPin,
+  Monitor,
+  Moon,
+  Route as RouteIcon,
+  Settings,
+  Sun,
+  Tags,
+  Users,
+  Wallet,
+} from 'lucide-react';
 import { NavLink, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { useAuth } from './auth';
+import { useApi } from './hooks';
 import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import {
@@ -16,47 +38,133 @@ import { PlantsPage } from './pages/PlantsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { RidesPage } from './pages/RidesPage';
 import { RoutesPage } from './pages/RoutesPage';
+import { useTheme } from './theme';
 
-const NAV: { to: string; label: string; adminOnly?: boolean }[] = [
-  { to: '/', label: 'Control room' },
-  { to: '/rides', label: 'Rides' },
-  { to: '/reports', label: 'Cost reports', adminOnly: true },
-  { to: '/vehicles', label: 'Vehicles', adminOnly: true },
-  { to: '/vendors', label: 'Vendors', adminOnly: true },
-  { to: '/rate-cards', label: 'Rate cards', adminOnly: true },
-  { to: '/stops', label: 'Stops', adminOnly: true },
-  { to: '/routes', label: 'Routes', adminOnly: true },
-  { to: '/users', label: 'Users', adminOnly: true },
-  { to: '/departments', label: 'Departments', adminOnly: true },
-  { to: '/cost-centers', label: 'Cost centers', adminOnly: true },
-  { to: '/projects', label: 'Projects', adminOnly: true },
-  { to: '/plants', label: 'Plants & settings', adminOnly: true },
+interface NavItem {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  adminOnly?: boolean;
+}
+
+const NAV: { title: string; items: NavItem[] }[] = [
+  {
+    title: 'Operations',
+    items: [
+      { to: '/', label: 'Control room', icon: LayoutDashboard },
+      { to: '/rides', label: 'Rides', icon: ListChecks },
+      { to: '/reports', label: 'Cost reports', icon: BadgeIndianRupee, adminOnly: true },
+    ],
+  },
+  {
+    title: 'Fleet',
+    items: [
+      { to: '/vehicles', label: 'Vehicles', icon: CarFront, adminOnly: true },
+      { to: '/vendors', label: 'Vendors', icon: Handshake, adminOnly: true },
+      { to: '/rate-cards', label: 'Rate cards', icon: Tags, adminOnly: true },
+    ],
+  },
+  {
+    title: 'Network',
+    items: [
+      { to: '/routes', label: 'Routes & timetables', icon: RouteIcon, adminOnly: true },
+      { to: '/stops', label: 'Stops', icon: MapPin, adminOnly: true },
+    ],
+  },
+  {
+    title: 'Organisation',
+    items: [
+      { to: '/users', label: 'People', icon: Users, adminOnly: true },
+      { to: '/departments', label: 'Departments', icon: Building2, adminOnly: true },
+      { to: '/cost-centers', label: 'Cost centers', icon: Wallet, adminOnly: true },
+      { to: '/projects', label: 'Projects', icon: FolderKanban, adminOnly: true },
+    ],
+  },
+  {
+    title: 'Administration',
+    items: [{ to: '/plants', label: 'Plants & settings', icon: Settings, adminOnly: true }],
+  },
 ];
+
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]!.toUpperCase())
+    .join('');
+}
 
 function Layout() {
   const { session, logout } = useAuth();
+  const theme = useTheme();
+  const plants = useApi<{ id: number; name: string }[]>(session?.role === 'ADMIN' ? '/api/admin/plants' : null);
   if (!session) return <Navigate to="/login" replace />;
   const isAdmin = session.role === 'ADMIN';
+  const plantName = plants.data?.find((p) => p.id === session.plantId)?.name ?? 'Plant';
+  const ThemeIcon = theme.choice === 'dark' ? Moon : theme.choice === 'light' ? Sun : Monitor;
+
   return (
     <div className="layout">
-      <nav className="sidebar">
-        <div className="brand">Plant-Ride</div>
-        {NAV.filter((n) => isAdmin || !n.adminOnly).map((n) => (
-          <NavLink key={n.to} to={n.to} end={n.to === '/'}>
-            {n.label}
-          </NavLink>
-        ))}
-        <div className="sidebar-footer">
-          <div>{session.name}</div>
-          <div className="muted">{session.role}</div>
-          <button className="link" onClick={logout}>
-            Sign out
-          </button>
+      <nav className="sidebar" aria-label="Main">
+        <div className="brand">
+          <img src="/favicon.svg" alt="" />
+          <div>
+            <div className="brand-name">
+              Plant<span>Ride</span>
+            </div>
+            <div className="brand-sub">Mobility platform</div>
+          </div>
         </div>
+        {NAV.map((group) => {
+          const items = group.items.filter((n) => isAdmin || !n.adminOnly);
+          if (!items.length) return null;
+          return (
+            <div className="nav-group" key={group.title}>
+              <div className="nav-group-title">{group.title}</div>
+              {items.map(({ to, label, icon: Icon }) => (
+                <NavLink key={to} to={to} end={to === '/'}>
+                  <Icon aria-hidden />
+                  {label}
+                </NavLink>
+              ))}
+            </div>
+          );
+        })}
+        <div className="sidebar-footer">Plant-Ride · v0.1 pilot</div>
       </nav>
-      <main>
-        <Outlet />
-      </main>
+      <div className="main">
+        <header className="topbar">
+          <div className="plant-chip">
+            <Bus aria-hidden size={18} />
+            {plantName}
+            <span className="live-dot" title="Live" />
+          </div>
+          <div className="topbar-right">
+            <button
+              className="icon"
+              onClick={theme.next}
+              title={`Theme: ${theme.choice} (click to change)`}
+              aria-label={`Theme: ${theme.choice}`}
+            >
+              <ThemeIcon />
+            </button>
+            <span className="avatar" aria-hidden>
+              {initials(session.name)}
+            </span>
+            <div className="user-meta">
+              <strong>{session.name}</strong>
+              <small>{session.role === 'ADMIN' ? 'Administrator' : 'Control room'}</small>
+            </div>
+            <button className="icon" onClick={logout} title="Sign out" aria-label="Sign out">
+              <LogOut />
+            </button>
+          </div>
+        </header>
+        <main className="content">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

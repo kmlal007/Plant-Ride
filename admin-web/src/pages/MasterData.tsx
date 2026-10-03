@@ -1,4 +1,6 @@
+import { Building2, CarFront, FolderKanban, Handshake, MapPin, Tags, Users, Wallet } from 'lucide-react';
 import { CrudPage, Field } from '../components/CrudPage';
+import { VehicleStatusBadge } from '../components/StatusBadge';
 
 type Row = Record<string, unknown> & { id: number };
 const byCodeName = (r: Row) => `${r.code} — ${r.name}`;
@@ -18,7 +20,7 @@ export function DepartmentsPage() {
     { key: 'lng', label: 'Entrance longitude', type: 'number' },
     { key: 'active', label: 'Active', type: 'checkbox' },
   ];
-  return <CrudPage title="Departments" path="/api/admin/departments" fields={fields} />;
+  return <CrudPage icon={Building2} title="Departments" description="Departments of the plant. The entrance location is offered as a ride destination." path="/api/admin/departments" fields={fields} />;
 }
 
 export function CostCentersPage() {
@@ -31,6 +33,7 @@ export function CostCentersPage() {
   ];
   return (
     <CrudPage
+      icon={Wallet}
       title="Cost Centers"
       description="Every ride is charged to a cost center or a project."
       path="/api/admin/cost-centers"
@@ -46,14 +49,23 @@ export function ProjectsPage() {
     { key: 'costCenterId', label: 'Cost center', lookup: costCenterLookup, required: true },
     { key: 'active', label: 'Active', type: 'checkbox' },
   ];
-  return <CrudPage title="Projects" path="/api/admin/projects" fields={fields} />;
+  return <CrudPage icon={FolderKanban} title="Projects" description="Projects (SAP WBS elements) that rides can be charged to instead of a cost center." path="/api/admin/projects" fields={fields} />;
 }
 
 export function UsersPage() {
   const fields: Field[] = [
     { key: 'loginId', label: 'Login (employee code / phone)', required: true },
     { key: 'name', label: 'Name', required: true },
-    { key: 'role', label: 'Role', options: ['EMPLOYEE', 'DRIVER', 'DISPATCHER', 'ADMIN'], required: true },
+    {
+      key: 'role',
+      label: 'Role',
+      options: ['EMPLOYEE', 'DRIVER', 'DISPATCHER', 'ADMIN'],
+      required: true,
+      render: (r) => {
+        const tone = { ADMIN: 'accent', DISPATCHER: 'violet', DRIVER: 'info', EMPLOYEE: '' }[String(r.role)] ?? '';
+        return <span className={`badge ${tone}`}>{String(r.role).toLowerCase()}</span>;
+      },
+    },
     { key: 'phone', label: 'Phone' },
     { key: 'email', label: 'Email', formOnly: true },
     { key: 'grade', label: 'Grade', formOnly: true },
@@ -70,7 +82,7 @@ export function UsersPage() {
     { key: 'password', label: 'Password', type: 'password', formOnly: true, required: true, help: 'Leave empty to keep' },
     { key: 'active', label: 'Active', type: 'checkbox' },
   ];
-  return <CrudPage title="Users" path="/api/admin/users" fields={fields} />;
+  return <CrudPage icon={Users} title="People" description="Employees, approvers, drivers and control-room staff." path="/api/admin/users" fields={fields} />;
 }
 
 export function VendorsPage() {
@@ -80,7 +92,7 @@ export function VendorsPage() {
     { key: 'phone', label: 'Phone' },
     { key: 'active', label: 'Active', type: 'checkbox' },
   ];
-  return <CrudPage title="Vendors" path="/api/admin/vendors" fields={fields} />;
+  return <CrudPage icon={Handshake} title="Vendors" description="Contract transport providers and their contacts." path="/api/admin/vendors" fields={fields} />;
 }
 
 export function VehiclesPage() {
@@ -106,10 +118,20 @@ export function VehiclesPage() {
       formOnly: true,
     },
     { key: 'gpsDeviceId', label: 'GPS device id', help: 'IMEI / Traccar unique id' },
-    { key: 'status', label: 'Status', tableOnly: true },
+    {
+      key: 'status',
+      label: 'Status',
+      tableOnly: true,
+      render: (r) =>
+        r.serviceMode === 'FIXED_ROUTE' ? (
+          <span className="badge info">Tracked</span>
+        ) : (
+          <VehicleStatusBadge status={String(r.status)} />
+        ),
+    },
     { key: 'active', label: 'Active', type: 'checkbox' },
   ];
-  return <CrudPage title="Vehicles" path="/api/admin/vehicles" fields={fields} />;
+  return <CrudPage icon={CarFront} title="Vehicles" description="Department, vendor and pool vehicles; on-demand cabs and fixed-route shuttles." path="/api/admin/vehicles" fields={fields} />;
 }
 
 export function RateCardsPage() {
@@ -123,6 +145,7 @@ export function RateCardsPage() {
   ];
   return (
     <CrudPage
+      icon={Tags}
       title="Rate Cards"
       description="Internal charge rates used to cost rides to cost centers: max(minimum, base + km × per km + minutes × per minute)."
       path="/api/admin/rate-cards"
@@ -139,5 +162,5 @@ export function StopsPage() {
     { key: 'lng', label: 'Longitude', type: 'number', required: true },
     { key: 'active', label: 'Active', type: 'checkbox' },
   ];
-  return <CrudPage title="Stops" path="/api/admin/stops" fields={fields} />;
+  return <CrudPage icon={MapPin} title="Stops" description="Shuttle and bus stops used by routes and the employee app." path="/api/admin/stops" fields={fields} />;
 }

@@ -1,13 +1,13 @@
+import { ListChecks, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '../api';
+import { PageHeader } from '../components/PageHeader';
+import { RIDE_STATUSES, RideStatusBadge, rideStatusLabel } from '../components/StatusBadge';
 import { formatDateTime, formatMoney, localDate } from '../format';
 import { useApi } from '../hooks';
 import { Ride, Vehicle } from '../types';
 
-const STATUSES = [
-  'PENDING_APPROVAL', 'SCHEDULED', 'SEARCHING', 'OFFERED', 'ACCEPTED', 'DRIVER_ARRIVED', 'IN_PROGRESS',
-  'COMPLETED', 'CANCELLED', 'REJECTED', 'NO_SHOW', 'UNFULFILLED',
-];
+const STATUSES = RIDE_STATUSES;
 
 const today = () => localDate();
 
@@ -36,7 +36,11 @@ export function RidesPage() {
 
   return (
     <div className="page">
-      <h1>Rides</h1>
+      <PageHeader
+        icon={ListChecks}
+        title="Rides"
+        description="Every booking with its status, vehicle, distance and charge. Assign or cancel stuck rides."
+      />
       <div className="filters">
         <label>
           From <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
@@ -49,7 +53,9 @@ export function RidesPage() {
           <select value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">All</option>
             {STATUSES.map((s) => (
-              <option key={s}>{s}</option>
+              <option key={s} value={s}>
+                {rideStatusLabel(s)}
+              </option>
             ))}
           </select>
         </label>
@@ -66,8 +72,8 @@ export function RidesPage() {
               <th>From → To</th>
               <th>Status</th>
               <th>Vehicle / driver</th>
-              <th>Km</th>
-              <th>Charge</th>
+              <th className="num">Km</th>
+              <th className="num">Charge</th>
               <th />
             </tr>
           </thead>
@@ -77,32 +83,41 @@ export function RidesPage() {
                 <td>{r.id}</td>
                 <td>
                   {formatDateTime(r.createdAt)}
-                  {r.scheduledAt && <div className="muted">for {formatDateTime(r.scheduledAt)}</div>}
+                  {r.scheduledAt && <div className="cell-sub">for {formatDateTime(r.scheduledAt)}</div>}
                 </td>
                 <td>
-                  {r.requesterName}
-                  {r.visitorName && <div className="muted">Visitor: {r.visitorName} {r.gatePassRef && `(${r.gatePassRef})`}</div>}
+                  <div className="cell-main">{r.requesterName}</div>
+                  {r.visitorName && (
+                    <div className="cell-sub">
+                      <UserRound size={12} aria-hidden /> {r.visitorName} {r.gatePassRef && `· ${r.gatePassRef}`}
+                    </div>
+                  )}
                 </td>
                 <td>
-                  {r.rideType} · {r.passengerCount} pax
+                  <span className={`badge ${r.rideType === 'EXCLUSIVE' ? 'accent' : 'info'}`}>
+                    {r.rideType === 'EXCLUSIVE' ? 'Exclusive' : 'Shared'}
+                  </span>
+                  <div className="cell-sub">{r.passengerCount} pax</div>
                 </td>
                 <td>
-                  {r.pickupLabel} → {r.dropLabel}
-                  {r.purpose && <div className="muted">{r.purpose}</div>}
+                  <div className="cell-main">
+                    {r.pickupLabel} → {r.dropLabel}
+                  </div>
+                  {r.purpose && <div className="cell-sub">{r.purpose}</div>}
                 </td>
                 <td>
-                  <span className={`badge status-${r.status}`}>{r.status}</span>
-                  {r.cancelReason && <div className="muted">{r.cancelReason}</div>}
+                  <RideStatusBadge status={r.status} />
+                  {r.cancelReason && <div className="cell-sub">{r.cancelReason}</div>}
                 </td>
                 <td>
-                  {r.vehicleRegistrationNo ?? '—'}
-                  {r.driverName && <div className="muted">{r.driverName}</div>}
+                  <div className="cell-main">{r.vehicleRegistrationNo ?? '—'}</div>
+                  {r.driverName && <div className="cell-sub">{r.driverName}</div>}
                 </td>
-                <td>
+                <td className="num">
                   {r.distanceKm ?? '—'}
-                  {r.distanceSource === 'ESTIMATED' && <div className="muted">estimated</div>}
+                  {r.distanceSource === 'ESTIMATED' && <div className="cell-sub">estimated</div>}
                 </td>
-                <td>{formatMoney(r.fare)}</td>
+                <td className="num">{formatMoney(r.fare)}</td>
                 <td className="nowrap">
                   {(r.status === 'SEARCHING' || r.status === 'UNFULFILLED') &&
                     (assigning === r.id ? (
@@ -153,7 +168,7 @@ export function RidesPage() {
             ))}
             {rides.data?.length === 0 && (
               <tr>
-                <td colSpan={10} className="muted">
+                <td colSpan={10} className="empty">
                   No rides in this period.
                 </td>
               </tr>

@@ -1,6 +1,10 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect } from 'expo-router';
 import { useState } from 'react';
-import { Button, Card, ErrorText, Field, Muted, Screen, Title } from '../components/ui';
+import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LogoMark } from '../components/Logo';
+import { Button, Card, ErrorText, Field, T } from '../components/ui';
 import { useAuth } from '../lib/auth';
 
 export default function Login() {
@@ -25,15 +29,36 @@ export default function Login() {
   };
 
   return (
-    <Screen>
-      <Title>Plant-Ride Driver</Title>
-      <Muted>Sign in with your registered mobile number</Muted>
-      <Card>
-        <Field label="Mobile number" keyboardType="phone-pad" value={loginId} onChangeText={setLoginId} />
-        <Field label="Password" secureTextEntry value={password} onChangeText={setPassword} onSubmitEditing={submit} />
-        <ErrorText>{error}</ErrorText>
-        <Button title="Sign in" onPress={submit} busy={busy} disabled={!loginId || !password} />
-      </Card>
-    </Screen>
+    <LinearGradient colors={['#1B4469', '#0B1F33', '#07121E']} style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20, gap: 24 }}>
+            <View style={{ alignItems: 'center', gap: 12 }}>
+              <LogoMark size={84} variant="driver" />
+              <Text style={{ fontSize: 32, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.8 }}>
+                Plant<Text style={{ color: '#F26B1D' }}>Ride</Text>
+              </Text>
+              <View style={{ backgroundColor: '#F26B1D', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 }}>
+                <Text style={{ color: '#0B1F33', fontWeight: '800', letterSpacing: 2, fontSize: 12 }}>DRIVER</Text>
+              </View>
+            </View>
+            <Card>
+              <T variant="title">Sign in</T>
+              <Field label="Mobile number" icon="call-outline" keyboardType="phone-pad" value={loginId} onChangeText={setLoginId} />
+              <Field
+                label="Password"
+                icon="lock-closed-outline"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+                onSubmitEditing={submit}
+              />
+              <ErrorText>{error}</ErrorText>
+              <Button title="Sign in" icon="log-in-outline" onPress={submit} busy={busy} disabled={!loginId || !password} size="lg" />
+            </Card>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }

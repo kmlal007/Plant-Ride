@@ -1,3 +1,4 @@
+import { Bus, CircleCheck, Send } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '../api';
 import { formatMoney, localDate } from '../format';
@@ -42,17 +43,23 @@ export function ShuttleCostsPanel({ onPosted }: { onPosted: () => void }) {
   const p = preview.data;
   return (
     <section className="card">
-      <h2>Shuttle &amp; bus cost allocation</h2>
+      <h2>
+        <Bus size={18} aria-hidden /> Shuttle &amp; bus cost allocation
+      </h2>
       <div className="filters">
         <label>
           Month <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
         </label>
         {p && !p.posted && p.lines.length > 0 && (
           <button onClick={post} disabled={posting}>
-            {posting ? 'Posting…' : 'Post allocation'}
+            <Send aria-hidden /> {posting ? 'Posting…' : 'Post allocation'}
           </button>
         )}
-        {p?.posted && <span className="badge status-COMPLETED">Posted</span>}
+        {p?.posted && (
+          <span className="badge ok">
+            <CircleCheck aria-hidden /> Posted
+          </span>
+        )}
       </div>
       {(error || preview.error) && <div className="error">{error ?? preview.error}</div>}
       {p && (

@@ -1,11 +1,29 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { Button, Card, Chip, Chips, colors, ErrorText, Label, Muted, Screen, styles, Title } from '../../components/ui';
+import { Text, View } from 'react-native';
+import {
+  Card,
+  Chip,
+  Chips,
+  Divider,
+  EmptyState,
+  ErrorText,
+  HeaderButton,
+  ListRow,
+  LiveDot,
+  Pill,
+  Row,
+  Screen,
+  SectionTitle,
+  T,
+} from '../../components/ui';
 import { api } from '../../lib/api';
-import { time } from '../../lib/format';
 import { useAuth } from '../../lib/auth';
+import { time } from '../../lib/format';
+import { greeting } from '../../lib/greeting';
 import { LatLng, plantLocation } from '../../lib/location';
 import { Arrival, JourneyOption, NearbyStop, Stop } from '../../lib/types';
+import { routeColour, useTheme } from '../../theme';
 
 interface StopArrivals {
   stopId: number;
@@ -14,8 +32,17 @@ interface StopArrivals {
   scheduled: Arrival[];
 }
 
+function RouteBadge({ code }: { code: string }) {
+  return (
+    <View style={{ backgroundColor: routeColour(code), borderRadius: 7, paddingHorizontal: 8, paddingVertical: 3, minWidth: 36 }}>
+      <Text style={{ color: '#FFFFFF', fontWeight: '800', textAlign: 'center', fontSize: 13 }}>{code}</Text>
+    </View>
+  );
+}
+
 export default function Shuttles() {
   const { me } = useAuth();
+  const t = useTheme();
   const [location, setLocation] = useState<LatLng | null>(null);
   const [approximate, setApproximate] = useState(false);
   const [locating, setLocating] = useState(true);
@@ -87,97 +114,125 @@ export default function Shuttles() {
   };
 
   return (
-    <Screen>
-      <Title>Shuttles &amp; buses</Title>
+    <Screen
+      title="Shuttles & buses"
+      subtitle={`${greeting(me?.user.name)} · ${me?.plant.name ?? ''}`}
+      right={<HeaderButton icon="locate" label="Refresh location" onPress={locate} />}
+    >
       <ErrorText>{error}</ErrorText>
 
       <Card>
-        <View style={styles.row}>
-          <Label>{location ? 'Stops near you' : 'Choose a stop'}</Label>
-          <Pressable onPress={locate}>
-            <Text style={{ color: colors.accent }}>{locating ? 'Locating…' : 'Refresh'}</Text>
-          </Pressable>
-        </View>
-        {approximate && <Muted>You seem to be outside the plant; showing stops near the plant centre.</Muted>}
-        {!locating && !location && (
-          <Muted>Location is off or unavailable. Pick your stop from the list.</Muted>
+        <SectionTitle icon="location" right={locating ? <T variant="small">Locating…</T> : undefined}>
+          {location ? 'Stops near you' : 'Choose your stop'}
+        </SectionTitle>
+        {approximate && (
+          <Pill tone="info" icon="information-circle" label="Outside the plant — showing stops near the plant centre" />
         )}
-        {location
-          ? nearby.map((s) => (
-              <Pressable key={s.stopId} onPress={() => setSelected(s.stopId)}>
-                <View style={[styles.row, { paddingVertical: 6 }]}>
-                  <Text style={{ fontWeight: selected === s.stopId ? '700' : '400', color: colors.text }}>
-                    {selected === s.stopId ? '● ' : '○ '}
-                    {s.name}
-                  </Text>
-                  <Muted>
-                    {s.distanceMeters} m · {s.walkMinutes} min walk
-                  </Muted>
-                </View>
-              </Pressable>
-            ))
-          : (
-              <Chips>
-                {allStops.map((s) => (
-                  <Chip key={s.id} label={s.name} selected={selected === s.id} onPress={() => setSelected(s.id)} />
-                ))}
-              </Chips>
-            )}
+        {location ? (
+          nearby.map((s) => (
+            <ListRow
+              key={s.stopId}
+              icon="bus-outline"
+              title={s.name}
+              subtitle={`${s.distanceMeters} m away`}
+              selected={selected === s.stopId}
+              onPress={() => setSelected(s.stopId)}
+              right={
+                <Row style={{ gap: 4 }}>
+                  <Ionicons name="walk" size={16} color={t.muted} />
+                  <T variant="small">{s.walkMinutes} min</T>
+                </Row>
+              }
+            />
+          ))
+        ) : (
+          <Chips>
+            {allStops.map((s) => (
+              <Chip key={s.id} label={s.name} icon="bus-outline" selected={selected === s.id} onPress={() => setSelected(s.id)} />
+            ))}
+          </Chips>
+        )}
       </Card>
 
       {arrivals && (
-        <Card>
-          <Label>Next at {arrivals.stopName}</Label>
+        <Card tone="accent">
+          <SectionTitle icon="time">Next at {arrivals.stopName}</SectionTitle>
           {arrivals.live.map((a, i) => (
-            <View key={`live-${i}`} style={styles.row}>
-              <Text style={{ color: colors.text }}>
-                {a.routeCode} · {a.vehicleRegistrationNo}
-              </Text>
-              <Text style={{ color: colors.ok, fontWeight: '700' }}>
-                {a.minutesAway <= 0 ? 'Arriving' : `${a.minutesAway} min`} · live
-              </Text>
-            </View>
+            <Row key={`live-${i}`} style={{ paddingVertical: 4 }}>
+              <RouteBadge code={a.routeCode} />
+              <View style={{ flex: 1 }}>
+                <T variant="strong">{a.routeName}</T>
+                <T variant="small">{a.vehicleRegistrationNo}</T>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={{ color: t.ok, fontWeight: '800', fontSize: 17 }}>
+                  {a.minutesAway <= 0 ? 'Arriving' : `${a.minutesAway} min`}
+                </Text>
+                <Row style={{ gap: 5 }}>
+                  <LiveDot />
+                  <T variant="small">live GPS</T>
+                </Row>
+              </View>
+            </Row>
           ))}
+          {arrivals.live.length > 0 && arrivals.scheduled.length > 0 && <Divider />}
           {arrivals.scheduled.map((a, i) => (
-            <View key={`sch-${i}`} style={styles.row}>
-              <Text style={{ color: colors.text }}>
-                {a.routeCode} — {a.routeName}
-              </Text>
-              <Muted>
-                {time(a.arrivalTime)} ({a.minutesAway} min)
-              </Muted>
-            </View>
+            <Row key={`sch-${i}`} style={{ paddingVertical: 3 }}>
+              <RouteBadge code={a.routeCode} />
+              <T style={{ flex: 1 }} numberOfLines={1}>
+                {a.routeName}
+              </T>
+              <T variant="strong">{time(a.arrivalTime)}</T>
+              <T variant="small" style={{ width: 52, textAlign: 'right' }}>
+                {a.minutesAway} min
+              </T>
+            </Row>
           ))}
-          {arrivals.live.length === 0 && arrivals.scheduled.length === 0 && <Muted>No more services today.</Muted>}
-          <Muted style={{ fontSize: 12 }}>Scheduled times are from the timetable; “live” uses vehicle GPS.</Muted>
+          {arrivals.live.length === 0 && arrivals.scheduled.length === 0 && (
+            <EmptyState icon="moon-outline" title="No more services today" message="The first shuttle runs tomorrow morning." />
+          )}
+          <T variant="small">Scheduled times come from the timetable; live times from the vehicle's GPS.</T>
         </Card>
       )}
 
       <Card>
-        <Label>Where are you going?</Label>
+        <SectionTitle icon="flag">Where are you going?</SectionTitle>
         <Chips>
           {allStops.map((s) => (
             <Chip key={s.id} label={s.name} selected={destination === s.id} onPress={() => plan(s.id)} />
           ))}
         </Chips>
-        {!location && destination !== null && <Muted>Turn on location to get journey suggestions.</Muted>}
-        {journeys?.length === 0 && <Muted>No direct shuttle found. Try booking a ride instead.</Muted>}
+        {!location && destination !== null && <T variant="muted">Turn on location to get journey suggestions.</T>}
+        {journeys?.length === 0 && (
+          <EmptyState icon="car-sport-outline" title="No direct shuttle" message="Book a ride from the Book tab instead." />
+        )}
         {journeys?.map((j, i) => (
-          <View key={i} style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 8, gap: 2 }}>
-            <Text style={{ fontWeight: '700', color: colors.text }}>
-              Arrive {time(j.arrivalTime)} · {j.totalMinutes} min total
-            </Text>
-            <Muted>
-              Walk {j.boardStop.walkMinutes} min to {j.boardStop.name}, board {j.routeCode} at {time(j.departureTime)},
-              get off at {j.alightStopName}
-            </Muted>
+          <View
+            key={i}
+            style={{ borderTopWidth: 1, borderTopColor: t.border, paddingTop: 10, gap: 6 }}
+          >
+            <Row>
+              {i === 0 && <Pill tone="ok" icon="flash" label="Fastest" />}
+              <T variant="strong" style={{ flex: 1 }}>
+                Arrive {time(j.arrivalTime)}
+              </T>
+              <T variant="muted">{j.totalMinutes} min</T>
+            </Row>
+            <Row style={{ flexWrap: 'wrap' }}>
+              <Ionicons name="walk" size={16} color={t.muted} />
+              <T variant="small">{j.boardStop.walkMinutes} min</T>
+              <Ionicons name="chevron-forward" size={14} color={t.muted} />
+              <RouteBadge code={j.routeCode} />
+              <T variant="small">
+                {time(j.departureTime)} from {j.boardStop.name}
+              </T>
+              <Ionicons name="chevron-forward" size={14} color={t.muted} />
+              <Ionicons name="flag" size={15} color={t.accent} />
+              <T variant="small">{j.alightStopName}</T>
+            </Row>
           </View>
         ))}
       </Card>
-
-      {location && nearby.length === 0 && !locating && (
-        <Button title="Retry" variant="secondary" onPress={locate} />
-      )}
     </Screen>
   );
 }

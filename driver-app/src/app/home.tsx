@@ -1,13 +1,31 @@
-import { Link, Redirect } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Linking, Platform, Pressable, Text, View } from 'react-native';
-import { Button, Card, colors, ErrorText, Field, Label, Muted, Screen, styles, Title } from '../components/ui';
+import { Linking, Platform, Text, TextInput, View } from 'react-native';
+import { CountdownRing, NumberPlate, RadarIllustration, StageHeader } from '../components/DriverBits';
+import {
+  Avatar,
+  Button,
+  Card,
+  EmptyState,
+  ErrorText,
+  HeaderButton,
+  ListRow,
+  Pill,
+  Row,
+  RouteSummary,
+  Screen,
+  SectionTitle,
+  T,
+} from '../components/ui';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { confirm } from '../lib/dialog';
 import { DriverStatus, Ride, Vehicle } from '../lib/types';
 import { usePolling } from '../lib/usePolling';
+import { radius, useTheme } from '../theme';
 
 const NO_SHOW_WAIT_MS = 5 * 60_000;
+const OFFER_SECONDS = 45;
 
 function useNow(intervalMs = 1000) {
   const [now, setNow] = useState(Date.now());
@@ -54,50 +72,75 @@ export default function Home() {
   const vehicle = status.data?.vehicle ?? null;
   const ride = status.data?.ride ?? null;
 
+  const signOut = async () => {
+    if (await confirm('Sign out?', driver?.name ?? '', 'Sign out')) logout();
+  };
+
   return (
-    <Screen>
-      <View style={styles.row}>
-        <Title>{driver?.name ?? 'Driver'}</Title>
-        <Pressable onPress={logout} disabled={Boolean(vehicle)}>
-          <Text style={{ color: vehicle ? colors.muted : colors.accent }}>Sign out</Text>
-        </Pressable>
-      </View>
+    <Screen
+      variant="driver"
+      title={driver?.name ?? 'Driver'}
+      subtitle={vehicle ? (ride ? 'On a job' : 'Online · waiting for rides') : 'Off duty'}
+      right={
+        vehicle ? (
+          <HeaderButton icon="time-outline" label="Trip history" onPress={() => router.push('/history')} />
+        ) : (
+          <HeaderButton icon="log-out-outline" label="Sign out" onPress={signOut} />
+        )
+      }
+      footer={
+        vehicle && !ride ? (
+          <Button title="End duty" icon="power" variant="secondary" busy={busy} onPress={() => act('/api/driver/duty/end')} />
+        ) : undefined
+      }
+    >
       <ErrorText>{error ?? status.error}</ErrorText>
 
       {status.data && !vehicle && <StartDuty busy={busy} onStart={(id) => act('/api/driver/duty/start', { vehicleId: id })} />}
 
       {vehicle && (
-        <Card>
-          <View style={styles.row}>
-            <View>
-              <Text style={{ fontWeight: '700', fontSize: 18, color: colors.text }}>{vehicle.registrationNo}</Text>
-              <Muted>
+        <Card tone={ride ? 'warn' : 'ok'}>
+          <Row style={{ justifyContent: 'space-between' }}>
+            <View style={{ gap: 6 }}>
+              <NumberPlate value={vehicle.registrationNo} />
+              <T variant="small">
                 {vehicle.vehicleType} · {vehicle.capacity} seats
-              </Muted>
+              </T>
             </View>
-            <Text style={{ color: ride ? colors.warn : colors.ok, fontWeight: '700' }}>
-              {ride ? 'ON JOB' : 'ONLINE'}
-            </Text>
-          </View>
+            <Pill
+              label={ride ? 'ON JOB' : 'ONLINE'}
+              tone={ride ? 'warn' : 'ok'}
+              icon={ride ? 'briefcase' : 'radio-button-on'}
+            />
+          </Row>
         </Card>
       )}
 
       {vehicle && !ride && (
         <>
           <Card>
-            <Text style={{ fontSize: 16, color: colors.text }}>Waiting for ride requests…</Text>
-            <Muted>Keep the app open. New requests appear here automatically.</Muted>
+            <RadarIllustration />
+            <T variant="title" style={{ textAlign: 'center' }}>
+              Waiting for ride requests
+            </T>
+            <T variant="muted" style={{ textAlign: 'center' }}>
+              Keep the app open. New requests appear here automatically.
+            </T>
           </Card>
           {lastTrip && (
-            <Card>
-              <Label>Last trip completed</Label>
-              <Muted>
-                {lastTrip.dropLabel} · {lastTrip.distanceKm} km ({lastTrip.distanceSource === 'GPS' ? 'GPS' : 'estimated'}) ·{' '}
-                {lastTrip.durationMinutes} min
-              </Muted>
+            <Card tone="ok">
+              <SectionTitle icon="checkmark-circle">Last trip completed</SectionTitle>
+              <RouteSummary from={lastTrip.pickupLabel} to={lastTrip.dropLabel} />
+              <Row style={{ flexWrap: 'wrap' }}>
+                <Pill
+                  label={`${lastTrip.distanceKm} km ${lastTrip.distanceSource === 'GPS' ? '(GPS)' : '(estimated)'}`}
+                  tone="info"
+                  icon="speedometer-outline"
+                />
+                <Pill label={`${lastTrip.durationMinutes} min`} tone="neutral" icon="time-outline" />
+              </Row>
             </Card>
           )}
-          <Button title="End duty" variant="secondary" busy={busy} onPress={() => act('/api/driver/duty/end')} />
         </>
       )}
 
@@ -111,10 +154,6 @@ export default function Home() {
           }}
         />
       )}
-
-      <Link href="/history" style={{ color: colors.accent, textAlign: 'center', padding: 8 }}>
-        Trip history
-      </Link>
     </Screen>
   );
 }
@@ -123,15 +162,20 @@ function StartDuty({ busy, onStart }: { busy: boolean; onStart: (vehicleId: numb
   const vehicles = usePolling<Vehicle[]>('/api/driver/vehicles', 15_000);
   return (
     <Card>
-      <Label>Start duty — choose your vehicle</Label>
-      {vehicles.data?.length === 0 && <Muted>No free vehicles. Contact the transport control room.</Muted>}
+      <SectionTitle icon="key">Start duty</SectionTitle>
+      <T variant="muted">Choose the vehicle you are driving today.</T>
+      {vehicles.data?.length === 0 && (
+        <EmptyState icon="car-outline" title="No free vehicles" message="Contact the transport control room." />
+      )}
       {(vehicles.data ?? []).map((v) => (
-        <Button
+        <ListRow
           key={v.id}
-          title={`${v.registrationNo} · ${v.vehicleType}`}
-          variant="secondary"
-          busy={busy}
-          onPress={() => onStart(v.id)}
+          icon={v.vehicleType === 'SUV' ? 'car-sport-outline' : 'car-outline'}
+          tone="accent"
+          title={v.registrationNo}
+          subtitle={`${v.vehicleType} · ${v.capacity} seats`}
+          onPress={() => !busy && onStart(v.id)}
+          right={<Pill label="Start" tone="accent" icon="play" />}
         />
       ))}
     </Card>
@@ -147,20 +191,39 @@ function RideCard({
   busy: boolean;
   onAction: (action: string, body?: unknown) => Promise<void>;
 }) {
+  const t = useTheme();
   const now = useNow();
   const [otp, setOtp] = useState('');
-  const riderName = ride.visitorName ? `${ride.visitorName} (visitor)` : ride.requesterName;
+  const riderName = ride.visitorName ? `${ride.visitorName}` : ride.requesterName ?? 'Rider';
   const riderPhone = ride.visitorPhone ?? ride.requesterPhone;
 
-  const header = (
+  const details = (
     <>
-      <Text style={{ color: colors.muted }}>
-        {ride.rideType === 'EXCLUSIVE' ? 'Exclusive' : 'Shared'} · {ride.passengerCount} passenger(s)
-      </Text>
-      <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>Pickup: {ride.pickupLabel}</Text>
-      <Text style={{ fontSize: 16, color: colors.text }}>Drop: {ride.dropLabel}</Text>
-      {ride.purpose && <Muted>{ride.purpose}</Muted>}
+      <RouteSummary from={ride.pickupLabel} to={ride.dropLabel} />
+      <Row style={{ flexWrap: 'wrap' }}>
+        <Pill
+          label={ride.rideType === 'EXCLUSIVE' ? 'Exclusive' : 'Shared'}
+          tone={ride.rideType === 'EXCLUSIVE' ? 'accent' : 'info'}
+          icon={ride.rideType === 'EXCLUSIVE' ? 'car-sport-outline' : 'people-outline'}
+        />
+        <Pill label={`${ride.passengerCount} passenger${ride.passengerCount > 1 ? 's' : ''}`} icon="person-outline" />
+        {ride.visitorName && <Pill label="Visitor" tone="violet" icon="id-card-outline" />}
+      </Row>
+      {ride.purpose && <T variant="muted">“{ride.purpose}”</T>}
     </>
+  );
+
+  const contact = (
+    <Row style={{ backgroundColor: t.surface2, borderRadius: radius.md, padding: 10 }}>
+      <Avatar name={riderName} />
+      <View style={{ flex: 1 }}>
+        <T variant="strong">{riderName}</T>
+        <T variant="small">{ride.visitorName ? 'Visitor' : 'Employee'}</T>
+      </View>
+      {riderPhone && (
+        <Button title="Call" icon="call" variant="secondary" onPress={() => Linking.openURL(`tel:${riderPhone}`)} />
+      )}
+    </Row>
   );
 
   if (ride.status === 'OFFERED') {
@@ -168,42 +231,44 @@ function RideCard({
       ? Math.max(0, Math.round((new Date(ride.offerExpiresAt).getTime() - now) / 1000))
       : 0;
     return (
-      <Card style={{ borderColor: colors.warn, borderWidth: 2 }}>
-        <Text style={{ fontWeight: '700', color: colors.warn }}>NEW RIDE · respond in {secondsLeft}s</Text>
-        {header}
-        <View style={{ flexDirection: 'row', gap: 8 }}>
+      <Card tone="accent" style={{ borderWidth: 2, borderColor: t.accent }}>
+        <Row>
           <View style={{ flex: 1 }}>
-            <Button title="Decline" variant="danger" busy={busy} onPress={() => onAction('decline')} />
+            <Text style={{ color: t.accent, fontWeight: '900', letterSpacing: 1 }}>NEW RIDE REQUEST</Text>
+            <T variant="title">Pickup at {ride.pickupLabel}</T>
           </View>
-          <View style={{ flex: 2 }}>
-            <Button title="Accept" busy={busy} disabled={secondsLeft === 0} onPress={() => onAction('accept')} />
+          <CountdownRing seconds={secondsLeft} total={OFFER_SECONDS} />
+        </Row>
+        {details}
+        <Row>
+          <View style={{ flex: 1 }}>
+            <Button title="Decline" icon="close" variant="danger" busy={busy} onPress={() => onAction('decline')} size="lg" />
           </View>
-        </View>
+          <View style={{ flex: 1.6 }}>
+            <Button
+              title="Accept"
+              icon="checkmark-circle"
+              variant="success"
+              busy={busy}
+              disabled={secondsLeft === 0}
+              onPress={() => onAction('accept')}
+              size="lg"
+            />
+          </View>
+        </Row>
       </Card>
     );
   }
 
-  const contact = (
-    <View style={{ flexDirection: 'row', gap: 8 }}>
-      {riderPhone && (
-        <View style={{ flex: 1 }}>
-          <Button title={`Call ${riderName ?? 'rider'}`} variant="secondary" onPress={() => Linking.openURL(`tel:${riderPhone}`)} />
-        </View>
-      )}
-      <View style={{ flex: 1 }}>
-        <Button title="Map" variant="secondary" onPress={() => openMap(ride.pickupLat, ride.pickupLng, ride.pickupLabel)} />
-      </View>
-    </View>
-  );
-
   if (ride.status === 'ACCEPTED') {
     return (
       <Card>
-        <Label>Go to pickup</Label>
-        {header}
+        <StageHeader step={1} total={3} title="Go to pickup" icon="navigate" />
+        {details}
         {contact}
-        <Button title="I have arrived" busy={busy} onPress={() => onAction('arrive')} />
-        <Button title="Can't do this ride" variant="secondary" busy={busy} onPress={() => onAction('decline')} />
+        <Button title="Open map" icon="map-outline" variant="secondary" onPress={() => openMap(ride.pickupLat, ride.pickupLng, ride.pickupLabel)} />
+        <Button title="I have arrived" icon="location" onPress={() => onAction('arrive')} busy={busy} size="lg" />
+        <Button title="Can't do this ride" variant="ghost" onPress={() => onAction('decline')} busy={busy} />
       </Card>
     );
   }
@@ -213,13 +278,36 @@ function RideCard({
     const noShowIn = Math.max(0, Math.ceil((NO_SHOW_WAIT_MS - waitedMs) / 60_000));
     return (
       <Card>
-        <Label>Waiting for {riderName}</Label>
-        {header}
+        <StageHeader step={2} total={3} title={`Waiting for ${riderName}`} icon="hourglass" />
         {contact}
-        <Field label="Rider's 4-digit OTP" keyboardType="number-pad" maxLength={4} value={otp} onChangeText={setOtp} />
-        <Button title="Start trip" busy={busy} disabled={otp.length !== 4} onPress={() => onAction('start', { otp })} />
+        <View style={{ gap: 6 }}>
+          <T variant="strong">Ask the rider for their 4-digit OTP</T>
+          <TextInput
+            value={otp}
+            onChangeText={(v) => setOtp(v.replace(/\D/g, '').slice(0, 4))}
+            keyboardType="number-pad"
+            maxLength={4}
+            placeholder="• • • •"
+            placeholderTextColor={t.muted}
+            accessibilityLabel="Rider OTP"
+            style={{
+              fontSize: 34,
+              fontWeight: '900',
+              letterSpacing: 18,
+              textAlign: 'center',
+              color: t.text,
+              borderWidth: 2,
+              borderColor: otp.length === 4 ? t.accent : t.border,
+              borderRadius: radius.md,
+              paddingVertical: 12,
+              backgroundColor: t.surface2,
+            }}
+          />
+        </View>
+        <Button title="Start trip" icon="play" variant="success" busy={busy} disabled={otp.length !== 4} onPress={() => onAction('start', { otp })} size="lg" />
         <Button
-          title={noShowIn > 0 ? `Rider not here (available in ${noShowIn} min)` : 'Rider not here — mark no-show'}
+          title={noShowIn > 0 ? `Rider not here (in ${noShowIn} min)` : 'Rider not here — mark no-show'}
+          icon="person-remove-outline"
           variant="danger"
           busy={busy}
           disabled={noShowIn > 0}
@@ -230,11 +318,14 @@ function RideCard({
   }
 
   return (
-    <Card style={{ borderColor: colors.ok, borderWidth: 2 }}>
-      <Text style={{ fontWeight: '700', color: colors.ok }}>TRIP IN PROGRESS</Text>
-      <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>Drop: {ride.dropLabel}</Text>
-      <Muted>Rider: {riderName}</Muted>
-      <Button title="Complete trip" busy={busy} onPress={() => onAction('complete')} />
+    <Card tone="ok" style={{ borderWidth: 2, borderColor: t.ok }}>
+      <StageHeader step={3} total={3} title="Trip in progress" icon="car-sport" />
+      <View style={{ backgroundColor: t.surface2, borderRadius: radius.md, padding: 14, gap: 4 }}>
+        <T variant="small">DROP AT</T>
+        <Text style={{ fontSize: 24, fontWeight: '900', color: t.text }}>{ride.dropLabel}</Text>
+      </View>
+      {contact}
+      <Button title="Complete trip" icon="flag" variant="success" busy={busy} onPress={() => onAction('complete')} size="lg" />
     </Card>
   );
 }

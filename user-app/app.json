@@ -14,7 +14,7 @@
     "android": {
       "package": "com.plantride.user",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0E2A47",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -22,7 +22,9 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "Plant-Ride",
+      "themeColor": "#0E2A47"
     },
     "plugins": [
       "expo-router",
@@ -33,7 +35,17 @@
           "locationWhenInUsePermission": "Plant-Ride uses your location to find the nearest shuttle stop and set your pickup point."
         }
       ],
-      "expo-notifications"
-    ]
+      "expo-notifications",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180,
+          "backgroundColor": "#0B1F33",
+          "resizeMode": "contain"
+        }
+      ]
+    ],
+    "primaryColor": "#0E2A47"
   }
 }

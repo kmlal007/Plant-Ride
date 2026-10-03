@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Text, View } from 'react-native';
-import { Button, Card, colors, ErrorText, Muted, Screen, Title } from '../../components/ui';
+import { View } from 'react-native';
+import { Avatar, Button, Card, EmptyState, ErrorText, Pill, Row, RouteSummary, Screen, T } from '../../components/ui';
 import { api } from '../../lib/api';
 import { dateTime } from '../../lib/format';
-import { usePolling } from '../../lib/usePolling';
 import { Ride } from '../../lib/types';
+import { usePolling } from '../../lib/usePolling';
 
 /** Managers approve exclusive rides of their reportees. */
 export default function Approvals() {
@@ -26,28 +26,35 @@ export default function Approvals() {
   };
 
   return (
-    <Screen>
-      <Title>Approvals</Title>
+    <Screen title="Approvals" subtitle={data?.length ? `${data.length} waiting for you` : 'Exclusive ride requests'}>
       <ErrorText>{error ?? actionError}</ErrorText>
-      {data?.length === 0 && <Muted>Nothing waiting for your approval.</Muted>}
+      {data?.length === 0 && (
+        <EmptyState icon="checkmark-done-circle-outline" title="All caught up" message="Nothing is waiting for your approval." />
+      )}
       {(data ?? []).map((r) => (
-        <Card key={r.id}>
-          <Text style={{ fontWeight: '700', color: colors.text }}>{r.requesterName}</Text>
-          <Text style={{ color: colors.text }}>
-            {r.pickupLabel} → {r.dropLabel}
-          </Text>
-          <Muted>
-            Exclusive · {r.passengerCount} passenger(s){r.scheduledAt ? ` · ${dateTime(r.scheduledAt)}` : ' · now'}
-          </Muted>
-          {r.purpose && <Muted>Purpose: {r.purpose}</Muted>}
-          <View style={{ flexDirection: 'row', gap: 8 }}>
+        <Card key={r.id} tone="violet">
+          <Row>
+            <Avatar name={r.requesterName ?? '?'} />
             <View style={{ flex: 1 }}>
-              <Button title="Reject" variant="danger" busy={busyId === r.id} onPress={() => decide(r.id, false)} />
+              <T variant="strong">{r.requesterName}</T>
+              <T variant="small">Requested {dateTime(r.createdAt)}</T>
+            </View>
+            <Pill label={`${r.passengerCount} pax`} tone="info" icon="people-outline" />
+          </Row>
+          <RouteSummary from={r.pickupLabel} to={r.dropLabel} />
+          <Row style={{ flexWrap: 'wrap' }}>
+            <Pill label="Exclusive vehicle" tone="accent" icon="car-sport-outline" />
+            <Pill label={r.scheduledAt ? dateTime(r.scheduledAt) : 'Now'} tone="neutral" icon="time-outline" />
+          </Row>
+          {r.purpose && <T variant="muted">“{r.purpose}”</T>}
+          <Row>
+            <View style={{ flex: 1 }}>
+              <Button title="Reject" icon="close" variant="danger" busy={busyId === r.id} onPress={() => decide(r.id, false)} />
             </View>
             <View style={{ flex: 1 }}>
-              <Button title="Approve" busy={busyId === r.id} onPress={() => decide(r.id, true)} />
+              <Button title="Approve" icon="checkmark" variant="success" busy={busyId === r.id} onPress={() => decide(r.id, true)} />
             </View>
-          </View>
+          </Row>
         </Card>
       ))}
     </Screen>

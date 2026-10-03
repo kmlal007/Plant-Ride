@@ -1,3 +1,5 @@
+<p align="center"><img src="brand/logo-horizontal.svg" alt="Plant-Ride" width="460"></p>
+
 # Plant-Ride
 
 A mobility platform for large industrial plants. It covers intra-plant shuttles and commute buses
@@ -23,6 +25,15 @@ docker compose --env-file .env.demo --profile demo up -d --build
 
 This starts **Demo Steel Works (Pilot)**, a fictional plant with 30 days of history. A simulator moves shuttles and
 cabs on GPS and runs "bot" drivers, so the plant looks live. Follow the walkthrough for the story.
+
+## Screens
+
+| Control room (admin web) | Employee app | Driver app |
+|---|---|---|
+| <img src="docs/images/admin-control-room.png" width="420"> | <img src="docs/images/rider-shuttles.png" width="200"> <img src="docs/images/rider-ride-tracking.png" width="200"> | <img src="docs/images/driver-offer.png" width="200"> <img src="docs/images/driver-otp.png" width="200"> |
+
+Light and dark themes follow the device setting; the admin web also has a manual switch. Brand guide:
+[`brand/README.md`](brand/README.md).
 
 ## Applications
 

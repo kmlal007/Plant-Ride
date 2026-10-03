@@ -1,4 +1,6 @@
+import { Route as RouteIcon } from 'lucide-react';
 import { FormEvent, useState } from 'react';
+import { PageHeader } from '../components/PageHeader';
 import { api } from '../api';
 import { useApi } from '../hooks';
 
@@ -88,12 +90,11 @@ export function RoutesPage() {
 
   return (
     <div className="page">
-      <h1>Routes &amp; Timetables</h1>
-      <p className="muted">
-        Shuttles and buses run on fixed routes. Riders see the next arrivals at each stop, computed from the headway
-        and each stop’s minutes after the first stop. Live GPS estimates are shown alongside when a vehicle is
-        assigned to the route.
-      </p>
+      <PageHeader
+        icon={RouteIcon}
+        title="Routes & timetables"
+        description="Shuttles and buses run like a metro: a departure every N minutes between the first and last trip. Riders see scheduled times plus live GPS estimates."
+      />
       <div className="split">
         <section className="card grow">
           {routes.error && <div className="error">{routes.error}</div>}
@@ -111,11 +112,18 @@ export function RoutesPage() {
             <tbody>
               {(routes.data ?? []).map((r) => (
                 <tr key={r.route.id} className={editingId === r.route.id ? 'selected' : ''}>
-                  <td>{r.route.code}</td>
                   <td>
-                    {r.route.name} {!r.route.active && <span className="badge">inactive</span>}
+                    <span className="route-pill">{r.route.code}</span>
                   </td>
-                  <td>{r.route.routeKind}</td>
+                  <td>
+                    <span className="cell-main">{r.route.name}</span>{' '}
+                    {!r.route.active && <span className="badge">Inactive</span>}
+                  </td>
+                  <td>
+                    <span className={`badge ${r.route.routeKind === 'COMMUTE' ? 'violet' : 'info'}`}>
+                      {r.route.routeKind === 'COMMUTE' ? 'Commute' : 'Shuttle'}
+                    </span>
+                  </td>
                   <td>
                     {r.route.firstDeparture.slice(0, 5)}–{r.route.lastDeparture.slice(0, 5)} every{' '}
                     {r.route.headwayMinutes} min
@@ -123,7 +131,15 @@ export function RoutesPage() {
                       <div className="muted">₹{Number(r.route.monthlyCost).toLocaleString('en-IN')}/month</div>
                     )}
                   </td>
-                  <td>{r.stops.map((s) => `${stopName(s.stopId)} (+${s.offsetMinutes})`).join(' → ')}</td>
+                  <td>
+                    <ol className="stop-line">
+                      {r.stops.map((s) => (
+                        <li key={s.seq}>
+                          {stopName(s.stopId)} <span className="muted">+{s.offsetMinutes}′</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </td>
                   <td>
                     <button className="link" onClick={() => edit(r)}>
                       Edit

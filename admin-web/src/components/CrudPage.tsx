@@ -1,6 +1,8 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { Inbox, LucideIcon, Pencil, Plus, Search } from 'lucide-react';
+import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
 import { api } from '../api';
 import { useApi } from '../hooks';
+import { PageHeader } from './PageHeader';
 
 type Row = Record<string, unknown> & { id: number };
 
@@ -16,17 +18,26 @@ export interface Field {
   formOnly?: boolean;
   /** Read-only column: shown in the table, never in the form or payload (e.g. live status). */
   tableOnly?: boolean;
+  /** Custom table cell rendering (badges, icons). */
+  render?: (row: Row) => ReactNode;
   defaultValue?: unknown;
   help?: string;
 }
 
 interface Props {
+  icon: LucideIcon;
   title: string;
   description?: string;
   path: string;
   fields: Field[];
   /** Transform form state before sending (e.g. drop empty password on edit). */
   toPayload?: (form: Record<string, unknown>, editing: boolean) => Record<string, unknown>;
+}
+
+/** FIXED_ROUTE -> "Fixed route" */
+function humanize(value: string): string {
+  const s = value.replace(/_/g, ' ').toLowerCase();
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function emptyForm(fields: Field[]): Record<string, unknown> {
@@ -38,13 +49,14 @@ function emptyForm(fields: Field[]): Record<string, unknown> {
 }
 
 /** Generic list + create/edit form for master data screens. */
-export function CrudPage({ title, description, path, fields, toPayload }: Props) {
+export function CrudPage({ icon, title, description, path, fields, toPayload }: Props) {
   const { data, error, reload } = useApi<Row[]>(path);
   const [form, setForm] = useState<Record<string, unknown>>(() => emptyForm(fields));
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [lookups, setLookups] = useState<Record<string, Row[]>>({});
+  const [query, setQuery] = useState('');
 
   const lookupPaths = useMemo(
     () => Array.from(new Set(fields.filter((f) => f.lookup).map((f) => f.lookup!.path))),
@@ -100,10 +112,13 @@ export function CrudPage({ title, description, path, fields, toPayload }: Props)
     }
   };
 
-  const display = (field: Field, row: Row): string => {
+  const display = (field: Field, row: Row): ReactNode => {
+    if (field.render) return field.render(row);
     const v = row[field.key];
-    if (v === null || v === undefined || v === '') return '—';
-    if (field.type === 'checkbox') return v ? 'Yes' : 'No';
+    if (v === null || v === undefined || v === '') return <span className="muted">—</span>;
+    if (field.type === 'checkbox')
+      return v ? <span className="badge ok">Yes</span> : <span className="badge">No</span>;
+    if (field.options) return humanize(String(v));
     if (field.lookup) {
       const idOf = field.lookup.id ?? ((r: Row) => r.id);
       const match = lookups[field.lookup.path]?.find((r) => idOf(r) === v);
@@ -114,13 +129,31 @@ export function CrudPage({ title, description, path, fields, toPayload }: Props)
 
   const tableFields = fields.filter((f) => !f.formOnly);
   const formFields = fields.filter((f) => !f.tableOnly);
+  const q = query.trim().toLowerCase();
+  const rows = (data ?? []).filter(
+    (row) => !q || tableFields.some((f) => String(row[f.key] ?? '').toLowerCase().includes(q)),
+  );
+  const singular = title.replace(/ies$/, 'y').replace(/s$/, '').toLowerCase();
 
   return (
     <div className="page">
-      <h1>{title}</h1>
-      {description && <p className="muted">{description}</p>}
+      <PageHeader icon={icon} title={title} description={description} />
       <div className="split">
         <section className="card grow">
+          <div className="card-header">
+            <div className="search">
+              <Search aria-hidden />
+              <input
+                placeholder={`Search ${title.toLowerCase()}…`}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label={`Search ${title}`}
+              />
+            </div>
+            <span className="muted">
+              {rows.length} of {data?.length ?? 0}
+            </span>
+          </div>
           {error && <div className="error">{error}</div>}
           <table>
             <thead>
@@ -132,22 +165,23 @@ export function CrudPage({ title, description, path, fields, toPayload }: Props)
               </tr>
             </thead>
             <tbody>
-              {(data ?? []).map((row) => (
+              {rows.map((row) => (
                 <tr key={row.id} className={editingId === row.id ? 'selected' : ''}>
                   {tableFields.map((f) => (
                     <td key={f.key}>{display(f, row)}</td>
                   ))}
-                  <td>
-                    <button className="link" onClick={() => startEdit(row)}>
-                      Edit
+                  <td className="num">
+                    <button className="link" onClick={() => startEdit(row)} aria-label={`Edit ${singular}`}>
+                      <Pencil size={15} /> Edit
                     </button>
                   </td>
                 </tr>
               ))}
-              {data && data.length === 0 && (
+              {data && rows.length === 0 && (
                 <tr>
-                  <td colSpan={tableFields.length + 1} className="muted">
-                    Nothing here yet.
+                  <td colSpan={tableFields.length + 1} className="empty">
+                    <Inbox aria-hidden />
+                    {data.length === 0 ? `No ${title.toLowerCase()} yet — add one on the right.` : 'No matches.'}
                   </td>
                 </tr>
               )}
@@ -155,7 +189,17 @@ export function CrudPage({ title, description, path, fields, toPayload }: Props)
           </table>
         </section>
         <section className="card form-card">
-          <h2>{editingId === null ? `New ${title.replace(/s$/, '').toLowerCase()}` : `Edit #${editingId}`}</h2>
+          <h2>
+            {editingId === null ? (
+              <>
+                <Plus size={18} aria-hidden /> New {singular}
+              </>
+            ) : (
+              <>
+                <Pencil size={18} aria-hidden /> Edit {singular} #{editingId}
+              </>
+            )}
+          </h2>
           <form onSubmit={submit}>
             {formFields.map((f) => (
               <label key={f.key} className={f.type === 'checkbox' ? 'checkbox' : ''}>
@@ -183,7 +227,7 @@ export function CrudPage({ title, description, path, fields, toPayload }: Props)
                         <option value="">—</option>
                         {f.options?.map((o) => (
                           <option key={o} value={o}>
-                            {o}
+                            {humanize(o)}
                           </option>
                         ))}
                         {f.lookup &&

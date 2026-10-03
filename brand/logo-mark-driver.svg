@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Plant-Ride Driver">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F7823A"/>
+      <stop offset="1" stop-color="#C2410C"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <g transform="translate(-14 -24)">
+  <path d="M184 396 V164 H292 a86 86 0 0 1 0 172 H236" fill="none" stroke="#0B1F33" stroke-width="52"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="184" cy="396" r="34" fill="#ffffff"/>
+  <circle cx="184" cy="396" r="15" fill="#0B1F33"/>
+  <circle cx="362" cy="250" r="20" fill="#ffffff"/>
+  </g>
+</svg>
