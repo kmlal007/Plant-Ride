@@ -85,5 +85,12 @@ export interface Ride {
 
 export interface Me {
   user: { id: number; name: string; loginId: string; role: string; defaultCostCenterId: number | null };
-  plant: { id: number; name: string; visitorModuleEnabled: boolean; exclusiveRideRequiresApproval: boolean };
+  plant: {
+    id: number;
+    name: string;
+    centerLat: number | null;
+    centerLng: number | null;
+    visitorModuleEnabled: boolean;
+    exclusiveRideRequiresApproval: boolean;
+  };
 }

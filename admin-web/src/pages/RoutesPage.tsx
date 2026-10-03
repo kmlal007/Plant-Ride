@@ -24,6 +24,7 @@ interface RouteView {
     headwayMinutes: number;
     daysOfWeek: string;
     active: boolean;
+    monthlyCost: number | null;
   };
   stops: (RouteStop & { seq: number })[];
 }
@@ -37,6 +38,7 @@ const EMPTY = {
   headwayMinutes: 15,
   daysOfWeek: '1,2,3,4,5,6,7',
   active: true,
+  monthlyCost: null as number | null,
 };
 
 /** Routes are timetabled like a metro: a departure every N minutes between first and last trip. */
@@ -117,6 +119,9 @@ export function RoutesPage() {
                   <td>
                     {r.route.firstDeparture.slice(0, 5)}–{r.route.lastDeparture.slice(0, 5)} every{' '}
                     {r.route.headwayMinutes} min
+                    {r.route.monthlyCost !== null && (
+                      <div className="muted">₹{Number(r.route.monthlyCost).toLocaleString('en-IN')}/month</div>
+                    )}
                   </td>
                   <td>{r.stops.map((s) => `${stopName(s.stopId)} (+${s.offsetMinutes})`).join(' → ')}</td>
                   <td>
@@ -180,6 +185,16 @@ export function RoutesPage() {
                 <input value={form.daysOfWeek} onChange={(e) => setForm({ ...form, daysOfWeek: e.target.value })} />
               </label>
             </div>
+            <label>
+              <span>Monthly running cost (₹)</span>
+              <input
+                type="number"
+                min={0}
+                value={form.monthlyCost ?? ''}
+                onChange={(e) => setForm({ ...form, monthlyCost: e.target.value === '' ? null : Number(e.target.value) })}
+              />
+              <small className="muted">Distributed to departments per the plant’s shuttle cost policy.</small>
+            </label>
             <label className="checkbox">
               <input
                 type="checkbox"

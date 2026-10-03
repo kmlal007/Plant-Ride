@@ -1,5 +1,6 @@
 package com.plantride.network;
 
+import java.math.BigDecimal;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -32,7 +33,7 @@ public class NetworkAdminController {
 
     public record RouteRequest(@NotBlank String code, @NotBlank String name, @NotNull RouteKind routeKind,
                                @NotNull LocalTime firstDeparture, @NotNull LocalTime lastDeparture,
-                               int headwayMinutes, String daysOfWeek, Boolean active,
+                               int headwayMinutes, String daysOfWeek, Boolean active, BigDecimal monthlyCost,
                                @NotEmpty List<RouteStopRequest> stops) {
     }
 
@@ -125,6 +126,10 @@ public class NetworkAdminController {
         route.setHeadwayMinutes(req.headwayMinutes());
         route.setDaysOfWeek(req.daysOfWeek() == null || req.daysOfWeek().isBlank() ? "1,2,3,4,5,6,7" : req.daysOfWeek());
         route.setActive(req.active() == null || req.active());
+        if (req.monthlyCost() != null && req.monthlyCost().signum() < 0) {
+            throw ApiException.badRequest("monthlyCost cannot be negative");
+        }
+        route.setMonthlyCost(req.monthlyCost());
         Route saved = routes.save(route);
 
         routeStops.deleteByRouteId(saved.getId());

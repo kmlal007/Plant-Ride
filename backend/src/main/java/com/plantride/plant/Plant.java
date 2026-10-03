@@ -1,6 +1,13 @@
 package com.plantride.plant;
 
+import com.plantride.billing.CostPolicies.DepartmentVehicleSharing;
+import com.plantride.billing.CostPolicies.LentVehicleChargeMode;
+import com.plantride.billing.CostPolicies.OwnVehicleChargeMode;
+import com.plantride.billing.CostPolicies.ShuttleCostAllocation;
+
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -39,4 +46,15 @@ public class Plant {
     /** Optional module: lets hosts book rides for visitors against a gate pass reference. */
     private boolean visitorModuleEnabled = false;
     private boolean active = true;
+
+    // Cost policies (configurable because Finance has not decided yet).
+    @Enumerated(EnumType.STRING)
+    private DepartmentVehicleSharing departmentVehicleSharing = DepartmentVehicleSharing.OWN_DEPARTMENT_ONLY;
+    @Enumerated(EnumType.STRING)
+    private OwnVehicleChargeMode ownVehicleChargeMode = OwnVehicleChargeMode.CHARGE;
+    @Enumerated(EnumType.STRING)
+    private LentVehicleChargeMode lentVehicleChargeMode = LentVehicleChargeMode.CHARGE_BOOKER_CREDIT_OWNER;
+    @Enumerated(EnumType.STRING)
+    private ShuttleCostAllocation shuttleCostAllocation = ShuttleCostAllocation.NOT_ALLOCATED;
+    private Long shuttleCentralCostCenterId;
 }

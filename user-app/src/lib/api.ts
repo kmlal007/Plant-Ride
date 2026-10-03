@@ -1,20 +1,22 @@
-import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
+import { getItem, setItem } from './storage';
 
-export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:8080';
+/** In the browser build the API is served from the same origin (nginx proxies /api). */
+export const API_URL =
+  process.env.EXPO_PUBLIC_API_URL ?? (Platform.OS === 'web' ? '' : 'http://10.0.2.2:8080');
 const TOKEN_KEY = 'plantride.token';
 
 let token: string | null = null;
 let onUnauthorized: (() => void) | null = null;
 
 export async function loadToken(): Promise<string | null> {
-  token = await SecureStore.getItemAsync(TOKEN_KEY);
+  token = await getItem(TOKEN_KEY);
   return token;
 }
 
 export async function saveToken(value: string | null) {
   token = value;
-  if (value) await SecureStore.setItemAsync(TOKEN_KEY, value);
-  else await SecureStore.deleteItemAsync(TOKEN_KEY);
+  await setItem(TOKEN_KEY, value);
 }
 
 export function setUnauthorizedHandler(handler: () => void) {
@@ -32,7 +34,8 @@ export class ApiError extends Error {
 
 export async function api<T = unknown>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers.Authorization = `Bearer ${token}`;
+  const sentToken = token;
+  if (sentToken) headers.Authorization = `Bearer ${sentToken}`;
   let res: Response;
   try {
     res = await fetch(`${API_URL}${path}`, {
@@ -43,12 +46,20 @@ export async function api<T = unknown>(path: string, options: { method?: string;
   } catch {
     throw new ApiError(0, 'No connection to the server. Check your network and try again.');
   }
-  if (res.status === 401 && token) {
+  // Only a rejected token means "logged out"; ignore 401s of requests sent before login completed.
+  if (res.status === 401 && sentToken && sentToken === token) {
     await saveToken(null);
     onUnauthorized?.();
   }
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data: { error?: string } | null = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    // Proxies return HTML error pages (502/504) while the backend restarts.
+    if (!res.ok) throw new ApiError(res.status, `Server is unavailable (${res.status}). Please try again shortly.`);
+    throw new ApiError(res.status, 'Unexpected response from server');
+  }
   if (!res.ok) throw new ApiError(res.status, data?.error ?? `Request failed (${res.status})`);
   return data as T;
 }

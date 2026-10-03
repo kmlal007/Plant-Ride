@@ -14,10 +14,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.plantride.billing.RideCostingService;
 import com.plantride.common.ApiException;
 import com.plantride.common.GeoUtils;
-import com.plantride.fleet.FareCalculator;
-import com.plantride.fleet.RateCardRepository;
 import com.plantride.fleet.Vehicle;
 import com.plantride.fleet.VehicleRepository;
 import com.plantride.fleet.VehicleStatus;
@@ -60,8 +59,7 @@ public class RideService {
     private final VehicleRepository vehicles;
     private final CostCenterRepository costCenters;
     private final ProjectRepository projects;
-    private final RateCardRepository rateCards;
-    private final CostAllocationRepository allocations;
+    private final RideCostingService rideCosting;
     private final PlantService plantService;
     private final DispatchService dispatchService;
     private final TrackingService trackingService;
@@ -70,8 +68,8 @@ public class RideService {
     private final SecureRandom random = new SecureRandom();
 
     public RideService(RideRequestRepository rides, AppUserRepository users, VehicleRepository vehicles,
-                       CostCenterRepository costCenters, ProjectRepository projects, RateCardRepository rateCards,
-                       CostAllocationRepository allocations, PlantService plantService,
+                       CostCenterRepository costCenters, ProjectRepository projects, RideCostingService rideCosting,
+                       PlantService plantService,
                        DispatchService dispatchService, TrackingService trackingService,
                        NotificationService notifications, Clock clock) {
         this.rides = rides;
@@ -79,8 +77,7 @@ public class RideService {
         this.vehicles = vehicles;
         this.costCenters = costCenters;
         this.projects = projects;
-        this.rateCards = rateCards;
-        this.allocations = allocations;
+        this.rideCosting = rideCosting;
         this.plantService = plantService;
         this.dispatchService = dispatchService;
         this.trackingService = trackingService;
@@ -293,21 +290,7 @@ public class RideService {
         ride.setStatus(RideStatus.COMPLETED);
         ride.setCompletedAt(now);
 
-        rateCards.findByPlantIdAndVehicleTypeAndRideType(ride.getPlantId(), vehicle.getVehicleType(), ride.getRideType())
-                .ifPresentOrElse(rate -> {
-                    BigDecimal fare = FareCalculator.fare(rate, ride.getDistanceKm(), ride.getDurationMinutes());
-                    ride.setFare(fare);
-                    CostAllocation a = new CostAllocation();
-                    a.setPlantId(ride.getPlantId());
-                    a.setRideRequestId(ride.getId());
-                    a.setCostCenterId(ride.getCostCenterId());
-                    a.setProjectId(ride.getProjectId());
-                    a.setAmount(fare);
-                    a.setBasis(CostAllocation.BASIS_RIDE_FARE);
-                    a.setAllocatedAt(now);
-                    allocations.save(a);
-                }, () -> log.warn("No rate card for plant {} {} {}: ride {} left uncosted",
-                        ride.getPlantId(), vehicle.getVehicleType(), ride.getRideType(), ride.getId()));
+        rideCosting.cost(ride, vehicle, now);
 
         vehicles.transition(vehicle.getId(), VehicleStatus.ON_TRIP, VehicleStatus.AVAILABLE);
         notifications.notifyUser(ride.getRequesterId(), "Ride completed", "You have reached " + ride.getDropLabel());

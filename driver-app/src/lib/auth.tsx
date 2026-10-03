@@ -1,5 +1,6 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { api, loadToken, saveToken, setUnauthorizedHandler } from './api';
+import { registerForPush, unregisterPush } from './push';
 
 interface Driver {
   id: number;
@@ -23,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const me = await api<{ user: Driver & { role: string } }>('/api/me');
     if (me.user.role !== 'DRIVER') throw new Error('This app is for drivers only.');
     setDriver({ id: me.user.id, name: me.user.name });
+    registerForPush('driver');
   };
 
   useEffect(() => {
@@ -49,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    await unregisterPush();
     await saveToken(null);
     setDriver(null);
   };

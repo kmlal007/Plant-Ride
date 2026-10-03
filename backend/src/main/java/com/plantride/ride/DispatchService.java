@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.plantride.billing.CostPolicies.DepartmentVehicleSharing;
 import com.plantride.common.ApiException;
 import com.plantride.common.GeoUtils;
 import com.plantride.fleet.OwnerType;
@@ -31,8 +32,9 @@ import com.plantride.user.AppUserRepository;
  *
  * <p>Eligibility: on-demand, active, AVAILABLE, a driver signed on, a recent GPS fix within the plant's
  * dispatch radius, enough seats, matching vehicle type, and the driver has not already declined.
- * Department-owned vehicles serve only their own department. Ranking: the requester's own
- * department vehicles first, then by straight-line distance to pickup.
+ * Department-owned vehicles serve only their own department unless the plant lends idle department
+ * vehicles to the pool. Ranking: own department vehicles, then pool/vendor, then other departments'
+ * lent vehicles; within each group by straight-line distance to pickup.
  */
 @Service
 public class DispatchService {
@@ -102,13 +104,22 @@ public class DispatchService {
                 .filter(v -> v.getCapacity() >= ride.getPassengerCount())
                 .filter(v -> ride.getVehicleType() == null || ride.getVehicleType() == v.getVehicleType())
                 .filter(v -> v.getOwnerType() != OwnerType.DEPARTMENT
-                        || Objects.equals(v.getOwnerDepartmentId(), requesterDept))
+                        || Objects.equals(v.getOwnerDepartmentId(), requesterDept)
+                        || plant.getDepartmentVehicleSharing() == DepartmentVehicleSharing.LEND_WHEN_IDLE)
                 .filter(v -> v.getLastFixAt() != null && v.getLastFixAt().isAfter(cutoff))
                 .filter(v -> distanceKm(v, ride) <= plant.getDispatchRadiusKm())
                 .sorted(Comparator
-                        .comparing((Vehicle v) -> !(v.getOwnerType() == OwnerType.DEPARTMENT))
+                        .comparingInt((Vehicle v) -> preference(v, requesterDept))
                         .thenComparingDouble(v -> distanceKm(v, ride)))
                 .toList();
+    }
+
+    /** 0 = requester's own department vehicle, 1 = pool/vendor, 2 = another department's lent vehicle. */
+    private static int preference(Vehicle v, Long requesterDept) {
+        if (v.getOwnerType() != OwnerType.DEPARTMENT) {
+            return 1;
+        }
+        return Objects.equals(v.getOwnerDepartmentId(), requesterDept) ? 0 : 2;
     }
 
     private void offer(RideRequest ride, Vehicle v, Plant plant) {

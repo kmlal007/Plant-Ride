@@ -16,7 +16,7 @@ const STATUS_TEXT: Record<string, string> = {
   PENDING_APPROVAL: 'Waiting for approval',
   SCHEDULED: 'Scheduled',
   SEARCHING: 'Finding a vehicle',
-  OFFERED: 'Finding a vehicle',
+  OFFERED: 'Waiting for driver to accept',
   ACCEPTED: 'Driver on the way',
   DRIVER_ARRIVED: 'Driver has arrived',
   IN_PROGRESS: 'On the way',

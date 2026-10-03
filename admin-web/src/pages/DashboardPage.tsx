@@ -19,7 +19,7 @@ interface SafetyEvent {
   acknowledged: boolean;
 }
 
-const TILE_URL = import.meta.env.VITE_TILE_URL ?? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const TILE_URL = import.meta.env.VITE_TILE_URL || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
 const STATUS_COLOURS: Record<string, string> = {
   AVAILABLE: '#1a7f37',

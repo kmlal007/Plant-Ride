@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { formatMoney, localDate } from '../format';
 import { useApi } from '../hooks';
+import { ShuttleCostsPanel } from './ShuttleCostsPanel';
 
 interface Row {
   costCenterId: number;
@@ -41,8 +42,7 @@ export function ReportsPage() {
     <div className="page">
       <h1>Cost center charges</h1>
       <p className="muted">
-        Completed rides charged to each cost center. Export the CSV for Finance until the SAP posting integration is
-        in place.
+        Charges per cost center. Export the CSV for Finance until the SAP posting integration is in place.
       </p>
       <div className="filters">
         <label>
@@ -95,8 +95,12 @@ export function ReportsPage() {
             </tr>
           </tfoot>
         </table>
-        <p className="muted">Budget usage is meaningful when the range covers a single month.</p>
+        <p className="muted">
+          Includes ride charges, credits for lent department vehicles, and posted shuttle cost allocations. Budget
+          usage is meaningful when the range covers a single month.
+        </p>
       </section>
+      <ShuttleCostsPanel onPosted={report.reload} />
     </div>
   );
 }

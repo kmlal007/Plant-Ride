@@ -19,3 +19,7 @@ web-build/
 .DS_Store
 .idea/
 .vscode/
+
+# Deployment secrets (FCM service account, etc.)
+secrets/*
+!secrets/.gitkeep

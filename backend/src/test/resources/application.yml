@@ -19,7 +19,16 @@ plantride:
     plant-name: Test Plant
     admin-login: admin
     admin-password: admin123
-  seed-demo: false
+  demo:
+    seed: false
+    simulator: false
+    bot-driver-logins: ""
+    speed-kmh: 40
+  notifications:
+    push:
+      provider: none
+    sms:
+      provider: none
   # Effectively disable the background sweeper in tests; tests call it directly.
   sweeper-interval-ms: 3600000
   cors-origins: http://localhost:5173

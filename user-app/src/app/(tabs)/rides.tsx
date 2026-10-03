@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Alert, Linking, Pressable, Text, View } from 'react-native';
+import { Linking, Pressable, Text, View } from 'react-native';
 import { Button, Card, colors, ErrorText, Muted, Screen, styles, Title } from '../../components/ui';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
+import { confirm } from '../../lib/dialog';
 import { ACTIVE_STATUSES, dateTime, money, statusText } from '../../lib/format';
 import { usePolling } from '../../lib/usePolling';
 import { Ride } from '../../lib/types';
@@ -15,22 +16,15 @@ export default function MyRides() {
   const active = (data ?? []).filter((r) => ACTIVE_STATUSES.includes(r.status));
   const past = (data ?? []).filter((r) => !ACTIVE_STATUSES.includes(r.status));
 
-  const cancel = (ride: Ride) =>
-    Alert.alert('Cancel ride?', `${ride.pickupLabel} → ${ride.dropLabel}`, [
-      { text: 'Keep', style: 'cancel' },
-      {
-        text: 'Cancel ride',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await api(`/api/rides/${ride.id}/cancel`, { method: 'POST', body: {} });
-            reload();
-          } catch (e) {
-            setActionError((e as Error).message);
-          }
-        },
-      },
-    ]);
+  const cancel = async (ride: Ride) => {
+    if (!(await confirm('Cancel ride?', `${ride.pickupLabel} → ${ride.dropLabel}`, 'Cancel ride'))) return;
+    try {
+      await api(`/api/rides/${ride.id}/cancel`, { method: 'POST', body: {} });
+      reload();
+    } catch (e) {
+      setActionError((e as Error).message);
+    }
+  };
 
   return (
     <Screen>

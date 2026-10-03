@@ -3,7 +3,8 @@ import { Pressable, Text, View } from 'react-native';
 import { Button, Card, Chip, Chips, colors, ErrorText, Label, Muted, Screen, styles, Title } from '../../components/ui';
 import { api } from '../../lib/api';
 import { time } from '../../lib/format';
-import { currentLocation, LatLng } from '../../lib/location';
+import { useAuth } from '../../lib/auth';
+import { LatLng, plantLocation } from '../../lib/location';
 import { Arrival, JourneyOption, NearbyStop, Stop } from '../../lib/types';
 
 interface StopArrivals {
@@ -14,7 +15,9 @@ interface StopArrivals {
 }
 
 export default function Shuttles() {
+  const { me } = useAuth();
   const [location, setLocation] = useState<LatLng | null>(null);
+  const [approximate, setApproximate] = useState(false);
   const [locating, setLocating] = useState(true);
   const [nearby, setNearby] = useState<NearbyStop[]>([]);
   const [allStops, setAllStops] = useState<Stop[]>([]);
@@ -28,9 +31,15 @@ export default function Shuttles() {
     setLocating(true);
     setError(null);
     try {
-      const [loc, stops] = await Promise.all([currentLocation(), api<Stop[]>('/api/network/stops')]);
+      const centre =
+        me?.plant.centerLat != null && me?.plant.centerLng != null
+          ? { lat: me.plant.centerLat, lng: me.plant.centerLng }
+          : null;
+      const [where, stops] = await Promise.all([plantLocation(centre), api<Stop[]>('/api/network/stops')]);
       setAllStops(stops);
+      const loc = where?.point ?? null;
       setLocation(loc);
+      setApproximate(where?.approximate ?? false);
       if (loc) {
         const near = await api<NearbyStop[]>(`/api/network/stops/nearby?lat=${loc.lat}&lng=${loc.lng}&limit=4`);
         setNearby(near);
@@ -41,7 +50,7 @@ export default function Shuttles() {
     } finally {
       setLocating(false);
     }
-  }, []);
+  }, [me]);
 
   useEffect(() => {
     locate();
@@ -89,6 +98,7 @@ export default function Shuttles() {
             <Text style={{ color: colors.accent }}>{locating ? 'Locating…' : 'Refresh'}</Text>
           </Pressable>
         </View>
+        {approximate && <Muted>You seem to be outside the plant; showing stops near the plant centre.</Muted>}
         {!locating && !location && (
           <Muted>Location is off or unavailable. Pick your stop from the list.</Muted>
         )}

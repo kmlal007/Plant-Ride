@@ -94,8 +94,14 @@ public class NetworkService {
             live.addAll(liveArrivals(route, rs, now));
         }
         scheduled.sort(Comparator.comparing(Arrival::arrivalTime));
-        live.sort(Comparator.comparing(Arrival::arrivalTime));
-        return new StopArrivals(stop.getId(), stop.getName(), live,
+        // A loop route can pass the same stop twice; show each vehicle only at its next arrival.
+        List<Arrival> nextPerVehicle = live.stream()
+                .collect(Collectors.toMap(Arrival::vehicleRegistrationNo, Function.identity(),
+                        (a, b) -> a.arrivalTime().isBefore(b.arrivalTime()) ? a : b))
+                .values().stream()
+                .sorted(Comparator.comparing(Arrival::arrivalTime))
+                .toList();
+        return new StopArrivals(stop.getId(), stop.getName(), nextPerVehicle,
                 scheduled.subList(0, Math.min(limit, scheduled.size())));
     }
 

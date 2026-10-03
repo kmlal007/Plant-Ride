@@ -1,5 +1,6 @@
 package com.plantride.network;
 
+import java.math.BigDecimal;
 import java.time.LocalTime;
 
 import jakarta.persistence.Entity;
@@ -39,4 +40,6 @@ public class Route {
     /** ISO day numbers, Monday=1 ... Sunday=7, comma separated. */
     private String daysOfWeek = "1,2,3,4,5,6,7";
     private boolean active = true;
+    /** Fixed monthly running cost; distributed per the plant's shuttle cost allocation policy. */
+    private BigDecimal monthlyCost;
 }

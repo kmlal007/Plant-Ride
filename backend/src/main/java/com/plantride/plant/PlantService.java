@@ -5,7 +5,9 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.plantride.billing.CostPolicies.ShuttleCostAllocation;
 import com.plantride.common.ApiException;
+import com.plantride.org.CostCenterRepository;
 
 @Service
 public class PlantService {
@@ -14,10 +16,12 @@ public class PlantService {
 
     private final PlantRepository plants;
     private final SystemSettingRepository settings;
+    private final CostCenterRepository costCenters;
 
-    public PlantService(PlantRepository plants, SystemSettingRepository settings) {
+    public PlantService(PlantRepository plants, SystemSettingRepository settings, CostCenterRepository costCenters) {
         this.plants = plants;
         this.settings = settings;
+        this.costCenters = costCenters;
     }
 
     public Plant require(Long plantId) {
@@ -48,7 +52,32 @@ public class PlantService {
             throw ApiException.conflict("Multi-plant mode is disabled. Enable it in system settings first.");
         }
         plant.setId(null);
-        return plants.save(plant);
+        Plant saved = plants.save(plant);
+        applyCostPolicies(saved, plant);
+        return saved;
+    }
+
+    private void applyCostPolicies(Plant plant, Plant changes) {
+        if (changes.getDepartmentVehicleSharing() != null) {
+            plant.setDepartmentVehicleSharing(changes.getDepartmentVehicleSharing());
+        }
+        if (changes.getOwnVehicleChargeMode() != null) {
+            plant.setOwnVehicleChargeMode(changes.getOwnVehicleChargeMode());
+        }
+        if (changes.getLentVehicleChargeMode() != null) {
+            plant.setLentVehicleChargeMode(changes.getLentVehicleChargeMode());
+        }
+        if (changes.getShuttleCostAllocation() != null) {
+            plant.setShuttleCostAllocation(changes.getShuttleCostAllocation());
+        }
+        Long central = changes.getShuttleCentralCostCenterId();
+        if (central != null && costCenters.findByIdAndPlantId(central, plant.getId()).isEmpty()) {
+            throw ApiException.badRequest("Central cost center does not belong to this plant");
+        }
+        plant.setShuttleCentralCostCenterId(central);
+        if (plant.getShuttleCostAllocation() == ShuttleCostAllocation.CENTRAL_COST_CENTER && central == null) {
+            throw ApiException.badRequest("Choose the central cost center for shuttle costs");
+        }
     }
 
     @Transactional
@@ -66,6 +95,7 @@ public class PlantService {
         plant.setExclusiveRideRequiresApproval(changes.isExclusiveRideRequiresApproval());
         plant.setVisitorModuleEnabled(changes.isVisitorModuleEnabled());
         plant.setActive(changes.isActive());
+        applyCostPolicies(plant, changes);
         return plant;
     }
 }

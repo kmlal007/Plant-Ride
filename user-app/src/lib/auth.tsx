@@ -1,5 +1,6 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { api, loadToken, saveToken, setUnauthorizedHandler } from './api';
+import { registerForPush, unregisterPush } from './push';
 import { Me } from './types';
 
 interface AuthState {
@@ -19,7 +20,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUnauthorizedHandler(() => setMe(null));
     (async () => {
       try {
-        if (await loadToken()) setMe(await api<Me>('/api/me'));
+        if (await loadToken()) {
+          setMe(await api<Me>('/api/me'));
+          registerForPush('user');
+        }
       } catch {
         await saveToken(null);
       } finally {
@@ -38,9 +42,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     await saveToken(res.token);
     setMe(await api<Me>('/api/me'));
+    registerForPush('user');
   };
 
   const logout = async () => {
+    await unregisterPush();
     await saveToken(null);
     setMe(null);
   };

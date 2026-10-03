@@ -1,37 +1,93 @@
-# Local development stack: PostgreSQL + backend (with demo data).
-# Run the admin web separately with `npm run dev` in admin-web/ (it proxies /api to :8080).
+# Plant-Ride full stack. On-premise is the default target; the same images run on any cloud
+# container platform with a managed PostgreSQL (see docs/DEPLOYMENT.md).
+#
+#   Production:  cp .env.example .env   (fill in secrets)   && docker compose up -d --build
+#   Showcase:    docker compose --env-file .env.demo --profile demo up -d --build
 services:
   db:
     image: postgres:16
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: plantride
-      POSTGRES_USER: plantride
-      POSTGRES_PASSWORD: plantride
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: ${DB_NAME:-plantride}
+      POSTGRES_USER: ${DB_USER:-plantride}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U plantride"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-plantride}"]
       interval: 5s
-      retries: 10
+      retries: 20
 
   backend:
     build: ./backend
+    image: plantride/backend:${TAG:-latest}
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DB_URL: jdbc:postgresql://db:5432/plantride
-      DB_USER: plantride
-      DB_PASSWORD: plantride
-      SEED_DEMO: "true"
-      # Development-only secrets. Generate real ones for any shared environment.
-      JWT_SECRET: dev-only-secret-change-me-0123456789abcdef
-      TRACKING_API_KEY: dev-tracking-key
-      CORS_ORIGINS: http://localhost:5173
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-plantride}
+      DB_USER: ${DB_USER:-plantride}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET (32+ random bytes)}
+      TRACKING_API_KEY: ${TRACKING_API_KEY:?set TRACKING_API_KEY}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:?set BOOTSTRAP_ADMIN_PASSWORD}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8081}
+      PUSH_PROVIDER: ${PUSH_PROVIDER:-fcm}
+      FCM_PROJECT_ID: ${FCM_PROJECT_ID:-}
+      FCM_CREDENTIALS_FILE: ${FCM_CREDENTIALS_FILE:-}
+      PUSH_WEBHOOK_URL: ${PUSH_WEBHOOK_URL:-}
+      PUSH_WEBHOOK_AUTH: ${PUSH_WEBHOOK_AUTH:-}
+      SMS_PROVIDER: ${SMS_PROVIDER:-none}
+      SMS_WEBHOOK_URL: ${SMS_WEBHOOK_URL:-}
+      SMS_WEBHOOK_AUTH: ${SMS_WEBHOOK_AUTH:-}
+      SEED_DEMO: ${SEED_DEMO:-false}
+      DEMO_SIMULATOR: ${DEMO_SIMULATOR:-${SEED_DEMO:-false}}
+    volumes:
+      # Put fcm-service-account.json (and other secrets) in ./secrets; never commit them.
+      - ./secrets:/run/secrets/plantride:ro
+    # GPS gateway (Traccar) posts here; restrict to the plant network at the firewall.
     ports:
-      - "8080:8080"
+      - "${BACKEND_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080' || exit 1"]
+      interval: 10s
+      retries: 30
+
+  admin-web:
+    build:
+      context: .
+      dockerfile: admin-web/Dockerfile
+      args:
+        VITE_TILE_URL: ${MAP_TILE_URL:-}
+    image: plantride/admin-web:${TAG:-latest}
+    restart: unless-stopped
+    depends_on: [backend]
+    ports:
+      - "${ADMIN_PORT:-8081}:80"
+
+  # Browser builds of the two mobile apps, for showcases and desktop use.
+  user-web:
+    profiles: ["demo"]
+    build:
+      context: .
+      dockerfile: user-app/Dockerfile
+    image: plantride/user-web:${TAG:-latest}
+    restart: unless-stopped
+    depends_on: [backend]
+    ports:
+      - "${USER_WEB_PORT:-8082}:80"
+
+  driver-web:
+    profiles: ["demo"]
+    build:
+      context: .
+      dockerfile: driver-app/Dockerfile
+    image: plantride/driver-web:${TAG:-latest}
+    restart: unless-stopped
+    depends_on: [backend]
+    ports:
+      - "${DRIVER_WEB_PORT:-8083}:80"
 
 volumes:
   pgdata:

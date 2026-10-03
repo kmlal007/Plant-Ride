@@ -1,12 +1,43 @@
 package com.plantride.notification;
 
+import java.util.Map;
+
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+
 /**
- * Outbound notifications. The default implementation only logs; push (FCM) and SMS/WhatsApp
- * gateways plug in here without touching business code. Until push is wired, apps poll.
+ * Entry point for business code. Notifications are published as events and delivered asynchronously
+ * after the surrounding transaction commits, so a slow or failing provider never blocks or rolls back
+ * a ride action, and nobody is notified about a change that was rolled back.
  */
-public interface NotificationService {
+@Service
+public class NotificationService {
 
-    void notifyUser(Long userId, String title, String message);
+    public record UserNotification(Long userId, PushMessage message) {
+    }
 
-    void sms(String phone, String message);
+    public record SmsNotification(String phone, String message) {
+    }
+
+    private final ApplicationEventPublisher events;
+
+    public NotificationService(ApplicationEventPublisher events) {
+        this.events = events;
+    }
+
+    public void notifyUser(Long userId, String title, String message) {
+        notifyUser(userId, title, message, Map.of());
+    }
+
+    public void notifyUser(Long userId, String title, String message, Map<String, String> data) {
+        if (userId != null) {
+            events.publishEvent(new UserNotification(userId, new PushMessage(title, message, data)));
+        }
+    }
+
+    public void sms(String phone, String message) {
+        if (phone != null && !phone.isBlank()) {
+            events.publishEvent(new SmsNotification(phone, message));
+        }
+    }
 }

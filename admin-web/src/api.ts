@@ -30,7 +30,14 @@ export async function api<T = unknown>(path: string, options: { method?: string;
     window.location.assign('/login');
   }
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data: { error?: string } | null = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    // Proxies return HTML error pages (502/504) while the backend restarts.
+    if (!res.ok) throw new ApiError(res.status, `Server is unavailable (${res.status}). Please try again shortly.`);
+    throw new ApiError(res.status, 'Unexpected response from server');
+  }
   if (!res.ok) {
     throw new ApiError(res.status, data?.error ?? `Request failed (${res.status})`);
   }

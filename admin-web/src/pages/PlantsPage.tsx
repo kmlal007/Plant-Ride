@@ -18,7 +18,50 @@ interface Plant {
   exclusiveRideRequiresApproval: boolean;
   visitorModuleEnabled: boolean;
   active: boolean;
+  departmentVehicleSharing: string;
+  ownVehicleChargeMode: string;
+  lentVehicleChargeMode: string;
+  shuttleCostAllocation: string;
+  shuttleCentralCostCenterId: number | null;
 }
+
+/** Cost policies are configurable because Finance has not fixed them yet. */
+const POLICIES: { key: keyof Plant; label: string; options: [string, string][] }[] = [
+  {
+    key: 'departmentVehicleSharing',
+    label: 'Department-owned vehicles',
+    options: [
+      ['OWN_DEPARTMENT_ONLY', 'Serve own department only'],
+      ['LEND_WHEN_IDLE', 'Own department first, lend to others when idle'],
+    ],
+  },
+  {
+    key: 'ownVehicleChargeMode',
+    label: 'Department using its own vehicle',
+    options: [
+      ['CHARGE', 'Charge at rate card (full visibility)'],
+      ['NO_CHARGE', 'Record at zero (cost already in budget)'],
+    ],
+  },
+  {
+    key: 'lentVehicleChargeMode',
+    label: 'Department using a lent vehicle',
+    options: [
+      ['CHARGE_BOOKER_CREDIT_OWNER', 'Charge booker, credit owning department'],
+      ['CHARGE_BOOKER_ONLY', 'Charge booker only'],
+      ['NO_CHARGE', 'No charge'],
+    ],
+  },
+  {
+    key: 'shuttleCostAllocation',
+    label: 'Shuttle & bus monthly cost',
+    options: [
+      ['NOT_ALLOCATED', 'Central overhead (not allocated)'],
+      ['CENTRAL_COST_CENTER', 'Charge one cost center'],
+      ['HEADCOUNT', 'Split by employee headcount'],
+    ],
+  },
+];
 
 const NEW_PLANT: Omit<Plant, 'id'> = {
   code: '',
@@ -34,6 +77,11 @@ const NEW_PLANT: Omit<Plant, 'id'> = {
   exclusiveRideRequiresApproval: true,
   visitorModuleEnabled: false,
   active: true,
+  departmentVehicleSharing: 'OWN_DEPARTMENT_ONLY',
+  ownVehicleChargeMode: 'CHARGE',
+  lentVehicleChargeMode: 'CHARGE_BOOKER_CREDIT_OWNER',
+  shuttleCostAllocation: 'NOT_ALLOCATED',
+  shuttleCentralCostCenterId: null,
 };
 
 const NUMBER_FIELDS: [keyof Plant, string, string][] = [
@@ -50,6 +98,7 @@ export function PlantsPage() {
   const { session, switchPlant } = useAuth();
   const plants = useApi<Plant[]>('/api/admin/plants');
   const settings = useApi<{ multiPlantEnabled: boolean }>('/api/admin/system-settings');
+  const costCenters = useApi<{ id: number; code: string; name: string }[]>('/api/admin/cost-centers');
   const [form, setForm] = useState<Omit<Plant, 'id'> & { id?: number }>(NEW_PLANT);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -182,6 +231,40 @@ export function PlantsPage() {
               />
               Visitor &amp; delegate module (optional)
             </label>
+            <h3>Cost policies</h3>
+            {POLICIES.map((p) => (
+              <label key={p.key}>
+                <span>{p.label}</span>
+                <select value={String(form[p.key])} onChange={(e) => setForm({ ...form, [p.key]: e.target.value })}>
+                  {p.options.map(([value, text]) => (
+                    <option key={value} value={value}>
+                      {text}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
+            {form.shuttleCostAllocation === 'CENTRAL_COST_CENTER' && (
+              <label>
+                <span>Central cost center for shuttle costs</span>
+                <select
+                  value={form.shuttleCentralCostCenterId ?? ''}
+                  required
+                  onChange={(e) =>
+                    setForm({ ...form, shuttleCentralCostCenterId: e.target.value ? Number(e.target.value) : null })
+                  }
+                >
+                  <option value="">—</option>
+                  {form.id === session?.plantId &&
+                    (costCenters.data ?? []).map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.code} — {c.name}
+                      </option>
+                    ))}
+                </select>
+                {form.id !== session?.plantId && <small className="muted">Switch to this plant to pick its cost center.</small>}
+              </label>
+            )}
             {saved && <div className="ok">Saved.</div>}
             <div className="actions">
               <button type="submit">{form.id ? 'Save' : 'Create'}</button>

@@ -32,7 +32,8 @@
         {
           "locationWhenInUsePermission": "Plant-Ride uses your location to find the nearest shuttle stop and set your pickup point."
         }
-      ]
+      ],
+      "expo-notifications"
     ]
   }
 }

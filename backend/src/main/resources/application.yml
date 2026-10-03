@@ -14,6 +14,8 @@ spring:
 
 server:
   port: ${PORT:8080}
+  # Honour X-Forwarded-* from the reverse proxy (nginx / load balancer) for scheme, host and port.
+  forward-headers-strategy: framework
 
 management:
   endpoints:
@@ -34,6 +36,28 @@ plantride:
     plant-name: ${BOOTSTRAP_PLANT_NAME:Main Plant}
     admin-login: ${BOOTSTRAP_ADMIN_LOGIN:admin}
     admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:admin123}
-  seed-demo: ${SEED_DEMO:false}
+  demo:
+    # Pilot showcase plant "Demo Steel Works" + live simulator. Never enable in production.
+    seed: ${SEED_DEMO:false}
+    simulator: ${DEMO_SIMULATOR:${SEED_DEMO:false}}
+    # Drivers the simulator operates; 9000000001 is left for a human using the driver app.
+    bot-driver-logins: ${DEMO_BOT_DRIVERS:9000000002,9000000003,9000000004,9000000005,9000000006,9000000007}
+    speed-kmh: ${DEMO_SPEED_KMH:35}
   sweeper-interval-ms: ${SWEEPER_INTERVAL_MS:10000}
   cors-origins: ${CORS_ORIGINS:http://localhost:5173}
+  notifications:
+    push:
+      # fcm (default) | webhook | none. Apps always keep polling as a fallback.
+      provider: ${PUSH_PROVIDER:fcm}
+      fcm:
+        project-id: ${FCM_PROJECT_ID:}
+        credentials-file: ${FCM_CREDENTIALS_FILE:}
+      webhook:
+        url: ${PUSH_WEBHOOK_URL:}
+        auth-header: ${PUSH_WEBHOOK_AUTH:}
+    sms:
+      # none (default, logs only) | webhook
+      provider: ${SMS_PROVIDER:none}
+      webhook:
+        url: ${SMS_WEBHOOK_URL:}
+        auth-header: ${SMS_WEBHOOK_AUTH:}

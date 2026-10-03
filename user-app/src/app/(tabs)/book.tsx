@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Button, Card, Chip, Chips, colors, ErrorText, Field, Label, Muted, Screen, styles, Title } from '../../components/ui';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
-import { currentLocation } from '../../lib/location';
+import { notify } from '../../lib/dialog';
+import { plantLocation } from '../../lib/location';
 import { CostCenter, Department, Place, Project, Ride, Stop } from '../../lib/types';
 
 interface Lookups {
@@ -51,8 +52,14 @@ export default function Book() {
       const [l, s] = await Promise.all([api<Lookups>('/api/me/lookups'), api<Stop[]>('/api/network/stops')]);
       setLookups(l);
       setStops(s);
-      const loc = await currentLocation();
-      if (loc) {
+      const centre =
+        me?.plant.centerLat != null && me?.plant.centerLng != null
+          ? { lat: me.plant.centerLat, lng: me.plant.centerLng }
+          : null;
+      const where = await plantLocation(centre);
+      // Outside the plant there is no meaningful "here": riders pick a department or stop instead.
+      if (where && !where.approximate) {
+        const loc = where.point;
         const place = { key: 'here', label: 'My current location', lat: loc.lat, lng: loc.lng };
         setHere(place);
         setPickup((p) => p ?? place);
@@ -60,7 +67,7 @@ export default function Book() {
     } catch (e) {
       setError((e as Error).message);
     }
-  }, []);
+  }, [me]);
 
   useEffect(() => {
     load();
@@ -113,7 +120,7 @@ export default function Book() {
           gatePassRef: forVisitor ? gatePassRef : null,
         },
       });
-      Alert.alert('Ride requested', `Status: ${ride.status.replace(/_/g, ' ').toLowerCase()}. Your OTP is ${ride.otp}.`);
+      notify('Ride requested', `Status: ${ride.status.replace(/_/g, ' ').toLowerCase()}. Your OTP is ${ride.otp}.`);
       setPurpose('');
       setForVisitor(false);
       router.navigate('/rides');
