@@ -9,6 +9,7 @@ Employees don't pay for rides.
 
 - [`docs/PLAN.md`](docs/PLAN.md): product and architecture plan (problem, competitors, risks, phasing)
 - [`docs/DEMO_WALKTHROUGH.md`](docs/DEMO_WALKTHROUGH.md): scripted customer showcase on the pilot plant
+- [`docs/DISPATCH_DESIGN.md`](docs/DISPATCH_DESIGN.md): how bookings are matched to drivers, limitations and roadmap
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md): on-premise (default) and cloud deployment, notifications, configuration
 
 ## Quick start: pilot showcase
