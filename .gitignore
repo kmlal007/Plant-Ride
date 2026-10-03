@@ -1,0 +1,21 @@
+# Java
+backend/target/
+
+# Node
+node_modules/
+admin-web/dist/
+*.tsbuildinfo
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Env / secrets
+.env
+.env.*.local
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/

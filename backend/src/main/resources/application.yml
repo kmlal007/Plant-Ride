@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: plantride
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/plantride}
+    username: ${DB_USER:plantride}
+    password: ${DB_PASSWORD:plantride}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+server:
+  port: ${PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+plantride:
+  jwt:
+    # Must be at least 32 bytes. Always override in non-dev environments.
+    secret: ${JWT_SECRET:dev-only-secret-change-me-0123456789abcdef}
+    ttl-hours: ${JWT_TTL_HOURS:12}
+  tracking:
+    # Shared secret that the GPS gateway (Traccar) sends in the X-Api-Key header.
+    api-key: ${TRACKING_API_KEY:dev-tracking-key}
+  bootstrap:
+    plant-code: ${BOOTSTRAP_PLANT_CODE:PLANT1}
+    plant-name: ${BOOTSTRAP_PLANT_NAME:Main Plant}
+    admin-login: ${BOOTSTRAP_ADMIN_LOGIN:admin}
+    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:admin123}
+  seed-demo: ${SEED_DEMO:false}
+  sweeper-interval-ms: ${SWEEPER_INTERVAL_MS:10000}
+  cors-origins: ${CORS_ORIGINS:http://localhost:5173}

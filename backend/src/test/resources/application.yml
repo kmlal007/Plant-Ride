@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:plantride;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password:
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+plantride:
+  jwt:
+    secret: test-secret-0123456789abcdef0123456789abcdef
+    ttl-hours: 1
+  tracking:
+    api-key: test-key
+  bootstrap:
+    plant-code: PLANT1
+    plant-name: Test Plant
+    admin-login: admin
+    admin-password: admin123
+  seed-demo: false
+  # Effectively disable the background sweeper in tests; tests call it directly.
+  sweeper-interval-ms: 3600000
+  cors-origins: http://localhost:5173

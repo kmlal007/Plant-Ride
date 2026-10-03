@@ -1,0 +1,37 @@
+# Local development stack: PostgreSQL + backend (with demo data).
+# Run the admin web separately with `npm run dev` in admin-web/ (it proxies /api to :8080).
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: plantride
+      POSTGRES_USER: plantride
+      POSTGRES_PASSWORD: plantride
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U plantride"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/plantride
+      DB_USER: plantride
+      DB_PASSWORD: plantride
+      SEED_DEMO: "true"
+      # Development-only secrets. Generate real ones for any shared environment.
+      JWT_SECRET: dev-only-secret-change-me-0123456789abcdef
+      TRACKING_API_KEY: dev-tracking-key
+      CORS_ORIGINS: http://localhost:5173
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:
