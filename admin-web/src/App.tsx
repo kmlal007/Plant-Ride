@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { NavLink, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { useAuth } from './auth';
+import { PartnerCredit } from './components/PartnerCredit';
 import { useApi } from './hooks';
 import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
@@ -131,7 +132,10 @@ function Layout() {
             </div>
           );
         })}
-        <div className="sidebar-footer">Plant-Ride · v0.1 pilot</div>
+        <div className="sidebar-footer">
+          <PartnerCredit size="sm" />
+          <div style={{ marginTop: 6 }}>Plant-Ride · v0.1 pilot</div>
+        </div>
       </nav>
       <div className="main">
         <header className="topbar">

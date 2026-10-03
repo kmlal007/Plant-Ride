@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LogoMark } from '../components/Logo';
+import { PartnerCredit } from '../components/PartnerCredit';
 import { Button, Card, ErrorText, Field, T } from '../components/ui';
 import { useAuth } from '../lib/auth';
 
@@ -41,6 +42,7 @@ export default function Login() {
               <Text style={{ color: '#9FB3C8', fontSize: 15, textAlign: 'center' }}>
                 Shuttles and rides inside the plant
               </Text>
+              <PartnerCredit />
             </View>
             <Card>
               <T variant="title">Sign in</T>

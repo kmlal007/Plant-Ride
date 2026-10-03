@@ -315,3 +315,15 @@ button.icon:hover:not(:disabled) { background: var(--surface-hover); border-colo
   content: ''; position: absolute; left: 6px; top: 15px; bottom: -3px; width: 2px; background: var(--brand-orange); opacity: 0.45;
 }
 .stop-line .muted { font-size: 12px; margin-left: 4px; }
+
+/* ===================================================================== Partner co-brand */
+.partner-credit { display: inline-flex; align-items: center; gap: 8px; }
+.partner-credit img { display: block; width: auto; max-width: 160px; object-fit: contain; }
+.partner-by { font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; opacity: 0.75; }
+.partner-name { font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.partner-credit.dark { color: #c6d3e1; }
+.partner-credit.dark .partner-name { color: #ffffff; }
+.partner-credit.light { color: var(--muted); }
+.partner-credit.light .partner-name { color: var(--text); }
+.partner-credit.sm .partner-name { font-size: 12px; }
+.partner-credit.md .partner-name { font-size: 15px; }

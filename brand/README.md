@@ -5,6 +5,10 @@
 An original, fictional identity: a route line shaped like a **P**, with a stop at its base and a vehicle on the loop.
 It isn't tied to any customer brand, so it can be shown to any plant.
 
+**Co-brand:** the product is presented as *"Plant-Ride by SRM Eco Tech"*. The Plant-Ride mark stays on app icons;
+the SRM Eco Tech credit appears on login screens, the admin sidebar footer and the loading screens.
+Partner logo setup: [`partner/README.md`](partner/README.md).
+
 ## Files
 
 | File | Use |

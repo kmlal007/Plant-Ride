@@ -3,6 +3,7 @@ import { FormEvent, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { PlantIllustration } from '../components/Illustration';
+import { PartnerCredit } from '../components/PartnerCredit';
 
 export function LoginPage() {
   const { session, login } = useAuth();
@@ -37,6 +38,8 @@ export function LoginPage() {
             </div>
             <div className="brand-sub">Plant mobility platform</div>
           </div>
+          <span style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.15)', margin: '0 8px' }} />
+          <PartnerCredit />
         </div>
         <div>
           <h1>

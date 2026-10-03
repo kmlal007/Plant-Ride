@@ -1,6 +1,6 @@
 <p align="center"><img src="brand/logo-horizontal.svg" alt="Plant-Ride" width="460"></p>
 
-# Plant-Ride
+# Plant-Ride — by SRM Eco Tech
 
 A mobility platform for large industrial plants. It covers intra-plant shuttles and commute buses
 running on fixed timetables, on-demand rides (exclusive or shared) dispatched to drivers, live GPS
